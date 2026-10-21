@@ -1,6 +1,7 @@
 import { writable } from "svelte/store"
 
 export type RouteName =
+  | "authentication"
   | "storage"
   | "workflow-list"
   | "workflow-edit"
@@ -16,6 +17,7 @@ export type Route = { name: RouteName; params: Record<string, string>; query: UR
 export type Guard = { isDirty: () => boolean; confirm: () => Promise<boolean> }
 
 const PAGES: Record<string, RouteName> = {
+  authentication: "authentication",
   storage: "storage",
   activity: "activity",
   settings: "settings",

@@ -149,7 +149,7 @@ export function saveStorage(
 
 export type IdentityProvider = { type: string | null; params: string }
 
-// What the login method dialog asks a save to write. edited holds the keys changed
+// What the Authentication page asks a save to write. edited holds the keys changed
 // from what the dialog loaded (null = cleared); null edited means write params whole.
 export type IdentityEdit = {
   method: string | null
@@ -158,7 +158,7 @@ export type IdentityEdit = {
 }
 
 // The identity provider to write: the server's own (plugins rewrite its params at
-// runtime, e.g. local users and MFA) unless the login method dialog is saving, and
+// runtime, e.g. local users and MFA) unless the Authentication page is saving, and
 // then only what the dialog changed when the method stays the same.
 export function mergeIdentity(fresh: IdentityProvider | undefined, edit: IdentityEdit | null): IdentityProvider {
   if (edit === null) return structuredClone(fresh ?? { type: "", params: "{}" })

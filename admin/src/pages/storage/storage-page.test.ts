@@ -149,8 +149,22 @@ describe("storage page", () => {
     setup([{ type: "s3", label: "s3" }], "", "")
     await fireEvent.click(await card("s3"))
     expect(screen.getByRole("radio", { name: /sign in with/i })).toBeDisabled()
-    expect(screen.getByText("Set up a login method first")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Set up a login method first" })).toHaveAttribute("href", "/admin/authentication")
     expect(screen.getByText(/Login method: None/)).toBeInTheDocument()
+  })
+
+  it("the login method line links to the Authentication page", async () => {
+    setup([{ type: "s3", label: "s3" }])
+    expect(await screen.findByText(/Login method: htpasswd/)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "change" })).toHaveAttribute("href", "/admin/authentication")
+  })
+
+  it("the sign-in hint shows the variables of the current method", async () => {
+    vi.mocked(api.getAuthMiddlewares).mockResolvedValueOnce({
+      htpasswd: { banner: el("hidden", "banner", { description: "exposes {{ .user }} and {{ .password }}" }) },
+    } as never)
+    setup([{ type: "s3", label: "s3" }])
+    expect(await screen.findByText("{{ .user }} {{ .password }}")).toBeInTheDocument()
   })
 
   it("duplicate names block save", async () => {

@@ -5,7 +5,7 @@
   import SchemaForm from "$lib/components/SchemaForm.svelte"
   import { Input } from "$lib/components/ui/input"
   import { Label } from "$lib/components/ui/label"
-  import { Button } from "$lib/components/ui/button"
+  import { href } from "$lib/router"
   import * as RadioGroup from "$lib/components/ui/radio-group"
 
   let {
@@ -13,7 +13,6 @@
     backends,
     method,
     otherLabels,
-    onOpenLoginMethod,
     variables: tokens = ["{{ .user }}", "{{ .password }}"],
     savedSignin = false,
   }: {
@@ -21,7 +20,6 @@
     backends: Record<string, Schema>
     method: string | null
     otherLabels: string[]
-    onOpenLoginMethod?: () => void
     // {{ .name }} tokens the login method provides to the connection details
     variables?: string[]
     // the entry is saved in sign-in mode, so switching it to own drops stored details on save
@@ -66,9 +64,7 @@
             Users sign in with {method ?? "a login method"}, you hold the credentials
           </Label>
           {#if method === null}
-            <Button variant="link" size="xs" class="h-auto p-0" disabled={!onOpenLoginMethod} onclick={() => onOpenLoginMethod?.()}>
-              Set up a login method first
-            </Button>
+            <a class="text-sm underline" data-link href={href("admin/authentication")}>Set up a login method first</a>
           {/if}
         </div>
       </div>
