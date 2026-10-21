@@ -14,7 +14,8 @@ export type RouteName =
 
 export type Route = { name: RouteName; params: Record<string, string>; query: URLSearchParams }
 
-export type Guard = { isDirty: () => boolean; confirm: () => Promise<boolean> }
+// stays: true when moving to that route keeps the guarded page (and its edits) on screen
+export type Guard = { isDirty: () => boolean; confirm: () => Promise<boolean>; stays?: (to: Route | null) => boolean }
 
 const PAGES: Record<string, RouteName> = {
   authentication: "authentication",
@@ -68,6 +69,13 @@ export function parseRoute(pathname: string, search: string, baseURI: string): R
       return null
     }
   }
+  if (page === "settings" && sub !== undefined) {
+    try {
+      return make("settings", { section: decodeURIComponent(sub) })
+    } catch {
+      return null
+    }
+  }
   if (sub !== undefined) return null
   return page in PAGES ? make(PAGES[page]) : null
 }
@@ -96,8 +104,9 @@ function sync() {
   route.set(parseRoute(location.pathname, location.search, document.baseURI))
 }
 
-async function confirmLeave(): Promise<boolean> {
+async function confirmLeave(to: Route | null): Promise<boolean> {
   for (const g of [...guards]) {
+    if (g.stays?.(to)) continue
     if (g.isDirty() && !(await g.confirm())) return false
   }
   return true
@@ -109,7 +118,7 @@ async function onPopState() {
   if (checking) return
   checking = true
   try {
-    if (await confirmLeave()) sync()
+    if (await confirmLeave(parseRoute(location.pathname, location.search, document.baseURI))) sync()
     else history.pushState(null, "", lastUrl)
   } finally {
     checking = false
@@ -117,8 +126,9 @@ async function onPopState() {
 }
 
 export async function navigate(path: string, opts: { replace?: boolean } = {}): Promise<boolean> {
-  if (!(await confirmLeave())) return false
   const url = href(path)
+  const to = new URL(url, location.origin)
+  if (!(await confirmLeave(parseRoute(to.pathname, to.search, document.baseURI)))) return false
   if (opts.replace) history.replaceState(null, "", url)
   else history.pushState(null, "", url)
   sync()
