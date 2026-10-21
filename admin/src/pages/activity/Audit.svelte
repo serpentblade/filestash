@@ -11,7 +11,7 @@
   let values = $state<Record<string, any>>({})
   let timer: ReturnType<typeof setTimeout> | undefined
   let seq = 0
-  let ready = false
+  let ready = $state(false)
   let lastKey = ""
 
   // form keys carry a `search.` prefix that the API does not take

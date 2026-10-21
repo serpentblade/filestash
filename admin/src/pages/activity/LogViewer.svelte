@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount, tick } from "svelte"
   import { getLogs, logsUrl } from "$lib/api/endpoints"
-  import { poll } from "$lib/hooks/poll"
+  import { handlePollError, poll } from "$lib/hooks/poll"
   import { Button } from "$lib/components/ui/button"
 
   let text = $state("…")
   let pre: HTMLPreElement | undefined = $state()
   let hovered = false
+  let failed = $state(false)
 
   const filename = `access_${new Date().toISOString().substring(0, 10).replace(/-/g, "")}.log`
 
@@ -17,6 +18,7 @@
         // stay put when the user has scrolled up to read
         const atBottom = !pre || pre.scrollHeight - pre.scrollTop - pre.clientHeight < 24
         text = log
+        failed = false
         if (atBottom) {
           await tick()
           if (pre) pre.scrollTop = pre.scrollHeight
@@ -24,11 +26,13 @@
       },
       2500,
       () => hovered,
+      (err) => handlePollError(err, (f) => (failed = f)),
     ),
   )
 </script>
 
 <div class="space-y-3">
+  {#if failed}<p class="text-destructive text-sm">Couldn't load logs</p>{/if}
   <pre
     bind:this={pre}
     onmouseenter={() => (hovered = true)}
