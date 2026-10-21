@@ -17,6 +17,7 @@ import { toast } from "svelte-sonner"
 import { confirmState } from "$lib/confirm.svelte"
 import ConfirmDialog from "$lib/components/ConfirmDialog.svelte"
 import StoragePage from "./StoragePage.svelte"
+import CreateStorageDialog from "./CreateStorageDialog.svelte"
 import type { Connection, Schema } from "$lib/types"
 
 const el = (type: string, label: string, extra: Record<string, unknown> = {}) => ({
@@ -156,6 +157,7 @@ describe("storage page", () => {
     setup([{ type: "s3", label: "s3" }, { type: "s3", label: "s3" }])
     expect(await screen.findAllByRole("button", { name: /^s3\b/ })).toHaveLength(2)
     expect(screen.getAllByText("Duplicate name")).toHaveLength(2)
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled()
     await fireEvent.click(screen.getByRole("button", { name: "Save" }))
     expect(screen.getByRole("alert")).toHaveTextContent(/named "s3"/)
     expect(api.getAdminConfig).toHaveBeenCalledTimes(1)
@@ -292,5 +294,69 @@ describe("storage page", () => {
     await fireEvent.click(within(dialog).getByRole("button", { name: "sftp" }))
     expect(within(dialog).getByRole("button", { name: "Create" })).toBeDisabled()
     expect(within(dialog).getByRole("alert")).toHaveTextContent(/Two storages are named "s3"/)
+  })
+
+  it("a storage save keeps the server's current identity params, not the page-load copy", async () => {
+    setup([{ type: "s3", label: "s3" }])
+    await card("s3")
+    // a plugin (local users, MFA enrollment) rewrote the params after the page loaded
+    const now = JSON.stringify({ users: [{ name: "bob", mfa: "secret" }] })
+    const changed = adminConfig("htpasswd", "s3")
+    changed.middleware.identity_provider.params = el("hidden", "params", { value: now })
+    vi.mocked(api.getAdminConfig).mockResolvedValue(changed as never)
+    await fireEvent.click(screen.getByRole("button", { name: "Add storage" }))
+    const dialog = await screen.findByRole("dialog")
+    await fireEvent.click(within(dialog).getByRole("button", { name: "sftp" }))
+    await fireEvent.click(within(dialog).getByRole("button", { name: "Create" }))
+    await waitFor(() => expect(api.postConfig).toHaveBeenCalledTimes(1))
+    expect(posted().middleware.identity_provider).toEqual({ type: "htpasswd", params: now })
+  })
+
+  it("with no login method, leftovers say they will be removed instead of offering a button", async () => {
+    setup([{ type: "s3", label: "s3" }], "", "gone")
+    expect(await screen.findByText("1 leftover setting from an older configuration")).toBeInTheDocument()
+    expect(screen.getByText("These will be removed when you save, because no login method is set.")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Remove leftovers" })).toBeNull()
+  })
+
+  it("switching type in the create dialog and back restores what was typed", async () => {
+    setup([])
+    await fireEvent.click(await screen.findByRole("button", { name: "Add storage" }))
+    const dialog = await screen.findByRole("dialog")
+    await fireEvent.click(within(dialog).getByRole("button", { name: "s3" }))
+    await fireEvent.click(within(dialog).getByRole("radio", { name: /sign in with htpasswd/ }))
+    await fireEvent.input(within(dialog).getByLabelText("access_key_id"), { target: { value: "AKIA1" } })
+    await fireEvent.click(within(dialog).getByRole("button", { name: "sftp" }))
+    expect(within(dialog).queryByLabelText("access_key_id")).toBeNull()
+    await fireEvent.input(within(dialog).getByLabelText("hostname"), { target: { value: "h.local" } })
+    await fireEvent.click(within(dialog).getByRole("button", { name: "s3" }))
+    expect(within(dialog).getByLabelText("access_key_id")).toHaveValue("AKIA1")
+    await fireEvent.click(within(dialog).getByRole("button", { name: "sftp" }))
+    expect(within(dialog).getByLabelText("hostname")).toHaveValue("h.local")
+    await fireEvent.click(within(dialog).getByRole("button", { name: "Create" }))
+    await waitFor(() => expect(api.postConfig).toHaveBeenCalledTimes(1))
+    expect(JSON.parse(posted().middleware.attribute_mapping.params)).toEqual({ sftp: { type: "sftp", hostname: "h.local" } })
+  })
+
+  it("Add storage is disabled while a save is in flight", async () => {
+    setup([{ type: "s3", label: "s3" }])
+    await fireEvent.click(await card("s3"))
+    let finish: () => void = () => {}
+    vi.mocked(api.postConfig).mockReturnValue(new Promise<undefined>((r) => (finish = () => r(undefined))))
+    await fireEvent.input(screen.getByLabelText("Name"), { target: { value: "renamed" } })
+    await fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await waitFor(() => expect(api.postConfig).toHaveBeenCalledTimes(1))
+    expect(screen.getByRole("button", { name: "Add storage" })).toBeDisabled()
+    finish()
+    await waitFor(() => expect(screen.getByRole("button", { name: "Add storage" })).toBeEnabled())
+  })
+
+  it("the create dialog's Create is disabled while a save is in flight", async () => {
+    render(CreateStorageDialog, {
+      open: true, backends, method: "htpasswd", entries: [], saving: true, onCreate: vi.fn(async () => true),
+    })
+    const dialog = await screen.findByRole("dialog")
+    await fireEvent.click(within(dialog).getByRole("button", { name: "s3" }))
+    expect(within(dialog).getByRole("button", { name: "Create" })).toBeDisabled()
   })
 })

@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { getAdminConfig } from "$lib/api/endpoints"
   import { toValues } from "$lib/config/schema"
-  import type { StorageState } from "$lib/config/storage"
+  import { parseMethodParams, type Middleware, type StorageState } from "$lib/config/storage"
   import type { Schema } from "$lib/types"
   import * as Dialog from "$lib/components/ui/dialog"
   import { Button } from "$lib/components/ui/button"
@@ -15,7 +16,12 @@
     // why the page can't save right now; Save applies and saves, so it is disabled meanwhile
     blocked?: string
     // resolves false to keep the dialog open
-    onApply: (method: string | null, params: Record<string, string>) => Promise<boolean>
+    // edited: the keys changed from what the dialog loaded, when the method stays the same
+    onApply: (
+      method: string | null,
+      params: Record<string, string>,
+      edited: Record<string, string | null> | null,
+    ) => Promise<boolean>
   } = $props()
 
   const NOT_PARAMS = ["type", "banner"]
@@ -42,7 +48,12 @@
     }
     return out
   }
-  const baselineFor = (m: string) => (m === storage.method ? { ...storage.methodParams } : defaults(m))
+  // the current method's params as the server has them when the dialog opens; plugins
+  // rewrite them at runtime (local users, MFA), so the page-load copy may be stale
+  let currentParams = $state<Record<string, string> | null>(null)
+  let loading = $state(false)
+  const baselineFor = (m: string) =>
+    m === storage.method ? { ...(currentParams ?? storage.methodParams) } : defaults(m)
 
   let method = $state<string | null>(null)
   let paramsByMethod = $state<Record<string, Record<string, any>>>({})
@@ -51,13 +62,35 @@
     if (!paramsByMethod[m]) paramsByMethod[m] = baselineFor(m)
   }
 
+  async function freshParams(m: string | null): Promise<Record<string, string> | null> {
+    if (m === null) return null
+    try {
+      const mw = toValues(await getAdminConfig()).middleware as Middleware | undefined
+      const type = mw?.identity_provider?.type
+      return (type === "" || type === undefined ? null : type) === m ? parseMethodParams(mw?.identity_provider?.params) : null
+    } catch {
+      return null
+    }
+  }
+
   let wasOpen = false
+  let opening = 0
   $effect.pre(() => {
     if (open && !wasOpen) {
-      method = storage.method
+      const m = storage.method
+      const token = ++opening
+      method = m
       paramsByMethod = {}
-      if (method !== null) ensure(method)
+      currentParams = null
+      loading = true
+      void freshParams(m).then((p) => {
+        if (token !== opening) return
+        currentParams = p
+        loading = false
+        if (method !== null) ensure(method)
+      })
     }
+    if (!open && wasOpen) opening++
     wasOpen = open
   })
 
@@ -98,12 +131,22 @@
   }
 
   let busy = $state(false)
+  // keys changed from the loaded params (null = cleared)
+  function editedKeys(m: string, params: Record<string, string>): Record<string, string | null> {
+    const base = clean(baselineFor(m))
+    const out: Record<string, string | null> = {}
+    for (const [k, v] of Object.entries(params)) if (base[k] !== v) out[k] = v
+    for (const k of Object.keys(base)) if (!(k in params)) out[k] = null
+    return out
+  }
+
   async function save() {
-    if (blocked) return
+    if (blocked || loading) return
     const params = method === null ? {} : clean($state.snapshot(paramsByMethod[method]))
+    const edited = method !== null && !methodChanged ? editedKeys(method, params) : null
     busy = true
     try {
-      if (await onApply(method, params)) close()
+      if (await onApply(method, params, edited)) close()
     } finally {
       busy = false
     }
@@ -122,12 +165,15 @@
         <Button
           variant={method === m ? "default" : "outline"}
           aria-pressed={method === m}
+          disabled={loading}
           onclick={() => pick(m)}
         >{m ?? "None"}</Button>
       {/each}
     </div>
 
-    {#if !loaded}
+    {#if loading}
+      <p role="status" class="text-muted-foreground text-sm">Loading…</p>
+    {:else if !loaded}
       <p class="text-muted-foreground text-sm">Couldn't load the available login methods.</p>
     {/if}
     {#if method === null}
@@ -151,7 +197,7 @@
     {/if}
     <Dialog.Footer>
       <Button variant="outline" onclick={requestClose}>Cancel</Button>
-      <Button onclick={save} disabled={busy || blocked !== "" || !(methodChanged || paramsChanged)}
+      <Button onclick={save} disabled={busy || loading || blocked !== "" || !(methodChanged || paramsChanged)}
         aria-describedby={blocked ? "method-blocked" : undefined}>{methodChanged ? `Switch to ${method ?? "None"}` : "Save"}</Button>
     </Dialog.Footer>
   </Dialog.Content>

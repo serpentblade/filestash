@@ -125,6 +125,15 @@ describe("navigate", () => {
     expect(e.defaultPrevented).toBe(true)
   })
 
+  it("beforeunload sets returnValue when dirty", () => {
+    off = addGuard({ isDirty: () => true, confirm: async () => true })
+    const e = new Event("beforeunload", { cancelable: true })
+    let returnValue: unknown = undefined
+    Object.defineProperty(e, "returnValue", { get: () => returnValue, set: (v) => (returnValue = v), configurable: true })
+    window.dispatchEvent(e)
+    expect(returnValue).toBe("")
+  })
+
   it("intercepts clicks on a[data-link]", async () => {
     const a = document.createElement("a")
     a.setAttribute("data-link", "")

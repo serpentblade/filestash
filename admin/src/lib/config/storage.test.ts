@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   duplicateLabels,
   loadStorage,
+  mergeIdentity,
   newKey,
   nextLabel,
   parseJSONObject,
@@ -240,6 +241,39 @@ describe("storage model", () => {
     check(update(load(), 0, { label: "Company" }))
     const st = load()
     check({ ...st, entries: [] })
+  })
+
+  it("leftovers matching a loaded label only once trimmed stay gone after rename", () => {
+    const st = loadStorage([{ type: "s3", label: " s3 " }], mw("", "s3", { s3: { type: "s3", secret: "creds" } }))
+    expect(st.leftovers.relatedLabels).toEqual(["s3"])
+    const out = saveStorage(setMethod(update(st, 0, { label: "Company" }), "htpasswd", {}))
+    expect(splitRelated(out.middleware.attribute_mapping.related_backend)).not.toContain("s3")
+    expect(JSON.parse(out.middleware.attribute_mapping.params)).not.toHaveProperty("s3")
+  })
+
+  it("mergeIdentity keeps the server's identity provider when the save is not the login method dialog", () => {
+    const fresh = { type: "local", params: JSON.stringify({ users: [{ name: "bob", mfa: "x" }], notify: "on" }) }
+    expect(mergeIdentity(fresh, null)).toEqual(fresh)
+  })
+
+  it("mergeIdentity overlays only edited keys for the same method", () => {
+    const fresh = { type: "local", params: JSON.stringify({ users: [{ name: "bob" }], notify: "on", drop: "me" }) }
+    const out = mergeIdentity(fresh, { method: "local", params: { notify: "off", users: "stale" }, edited: { notify: "off", drop: null } })
+    expect(out.type).toBe("local")
+    expect(JSON.parse(out.params)).toEqual({ users: [{ name: "bob" }], notify: "off" })
+  })
+
+  it("mergeIdentity writes the dialog's params for a new method, and clears for None", () => {
+    const fresh = { type: "local", params: JSON.stringify({ users: [] }) }
+    expect(mergeIdentity(fresh, { method: "ldap", params: { hostname: "h" }, edited: null })).toEqual({
+      type: "ldap",
+      params: JSON.stringify({ hostname: "h" }),
+    })
+    // edited is ignored when the server's method differs from the one being saved
+    expect(mergeIdentity(fresh, { method: "ldap", params: { hostname: "h" }, edited: { hostname: "h" } }).params).toBe(
+      JSON.stringify({ hostname: "h" }),
+    )
+    expect(mergeIdentity(fresh, { method: null, params: {}, edited: null })).toEqual({ type: "", params: "{}" })
   })
 
   it("labels are saved trimmed", () => {

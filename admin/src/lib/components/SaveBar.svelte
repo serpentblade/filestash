@@ -32,6 +32,6 @@
       {/if}
     </div>
     <Button variant="outline" onclick={discard} disabled={saving || !dirty}>Discard</Button>
-    <Button onclick={onSave} disabled={saving}>{saving ? "Saving…" : saveLabel}</Button>
+    <Button onclick={onSave} disabled={saving || error !== ""}>{saving ? "Saving…" : saveLabel}</Button>
   </div>
 {/if}
