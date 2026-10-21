@@ -35,4 +35,17 @@ describe("draft", () => {
     expect(d.value.a).toBe(5)
     d.dispose()
   })
+
+  it("keeps edits typed while a save is in flight", async () => {
+    const d = createDraft({ a: 1 })
+    d.value.a = 2
+    let release!: () => void
+    const p = d.save(() => new Promise<void>((r) => (release = r)))
+    d.value.a = 3
+    release()
+    expect(await p).toBe(true)
+    expect(d.value.a).toBe(3)
+    expect(d.dirty).toBe(true)
+    d.dispose()
+  })
 })

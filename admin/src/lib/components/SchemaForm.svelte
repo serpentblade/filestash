@@ -14,6 +14,14 @@
     hidden?: string[]
   } = $props()
 
+  function ensureSections() {
+    for (const [key, node] of Object.entries(schema)) {
+      if (!isLeaf(node) && (typeof values[key] !== "object" || values[key] === null)) values[key] = {}
+    }
+  }
+  ensureSections()
+  $effect.pre(ensureSections)
+
   const entries = $derived(Object.entries(schema).filter(([key]) => !hidden.includes(key)))
   const banner = $derived.by(() => {
     const b = entries.find(([key, node]) => key === "banner" && isLeaf(node))

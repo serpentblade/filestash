@@ -49,7 +49,8 @@ export function createDraft<T>(initial: T) {
         const sent = $state.snapshot(value) as T
         const result = await fn(sent)
         baseline = $state.snapshot(result === undefined ? sent : result) as T
-        value = $state.snapshot(baseline) as T
+        // keep edits made while the save was in flight; they stay dirty against the new baseline
+        if (equal($state.snapshot(value), sent)) value = $state.snapshot(baseline) as T
         return true
       } catch {
         return false

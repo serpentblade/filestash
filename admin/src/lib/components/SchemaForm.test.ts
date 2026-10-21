@@ -45,4 +45,18 @@ describe("SchemaForm", () => {
     expect(screen.getByLabelText("B")).toHaveAttribute("name", "p.a.b")
     expect(screen.queryByLabelText("Skip")).toBeNull()
   })
+
+  const nested: Schema = { sec: { name: el("text", "Name", { value: "x" }) } }
+
+  it("nested edits reach the root when the section object is missing", async () => {
+    render(Harness, { schema: nested, values: {} })
+    await fireEvent.input(screen.getByLabelText("Name"), { target: { value: "typed" } })
+    expect(screen.getByTestId("out").textContent).toBe(JSON.stringify({ sec: { name: "typed" } }))
+  })
+
+  it("nested edits reach the root when values are pre-populated", async () => {
+    render(Harness, { schema: nested, values: { sec: { name: "x" } } })
+    await fireEvent.input(screen.getByLabelText("Name"), { target: { value: "typed" } })
+    expect(screen.getByTestId("out").textContent).toBe(JSON.stringify({ sec: { name: "typed" } }))
+  })
 })
