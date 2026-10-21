@@ -8,12 +8,15 @@
   import { cn } from "$lib/utils"
   import StorageForm from "./StorageForm.svelte"
 
-  let { open = $bindable(false), backends, method, entries, onCreate, onOpenLoginMethod }: {
+  let { open = $bindable(false), backends, method, entries, blocked = "", onCreate, onOpenLoginMethod }: {
     open?: boolean
     backends: Record<string, Schema>
     method: string | null
     entries: StorageEntry[]
-    onCreate: (entry: StorageEntry) => void
+    // why the page can't save right now; Create saves, so it is disabled meanwhile
+    blocked?: string
+    // resolves false to keep the dialog open
+    onCreate: (entry: StorageEntry) => Promise<boolean>
     onOpenLoginMethod?: () => void
   } = $props()
 
@@ -63,11 +66,16 @@
     close()
   }
 
-  function create() {
-    if (entry === null || invalid) return
+  let busy = $state(false)
+  async function create() {
+    if (entry === null || invalid || blocked) return
     const created = { ...$state.snapshot(entry), label: entry.label.trim() } as StorageEntry
-    close()
-    onCreate(created)
+    busy = true
+    try {
+      if (await onCreate(created)) close()
+    } finally {
+      busy = false
+    }
   }
 </script>
 
@@ -99,9 +107,13 @@
       />
     {/if}
 
+    {#if blocked}
+      <p id="create-blocked" role="alert" class="text-destructive text-sm">{blocked}</p>
+    {/if}
     <Dialog.Footer>
       <Button variant="outline" onclick={requestClose}>Cancel</Button>
-      <Button onclick={create} disabled={invalid}>Create</Button>
+      <Button onclick={create} disabled={invalid || busy || blocked !== ""}
+        aria-describedby={blocked ? "create-blocked" : undefined}>Create</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

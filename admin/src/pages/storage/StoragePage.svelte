@@ -53,14 +53,21 @@
   const othersOf = (i: number) => entries.filter((_, j) => j !== i).map((e) => e.label)
 
   // Save is blocked while any name is invalid; the message names the card to fix
-  const blocked = $derived.by(() => {
-    if (dups.size > 0) return `Two storages are named "${[...dups][0]}". Rename one to save.`
-    for (let i = 0; i < entries.length; i++) {
-      const err = validateLabel(entries[i].label, othersOf(i))
-      if (err) return `Storage ${i + 1} (${entries[i].type}): ${err}`
+  function blockReason(list: StorageEntry[]): string {
+    const d = duplicateLabels(list)
+    if (d.size > 0) return `Two storages are named "${[...d][0]}". Rename one to save.`
+    for (let i = 0; i < list.length; i++) {
+      const others = list.filter((_, j) => j !== i).map((e) => e.label)
+      const err = validateLabel(list[i].label, others)
+      if (err) return `Storage ${i + 1} (${list[i].type}): ${err}`
     }
     return ""
-  })
+  }
+  const blocked = $derived(blockReason(entries))
+  // deleting saves, so it is allowed while blocked only if removing the entry clears the block
+  const deleteBlocked = $derived(blocked && blockReason(entries.filter((_, j) => j !== selected)))
+
+  const ALSO_SAVES = "This also saves your other unsaved changes."
 
   async function fetchState(): Promise<Draft> {
     const [admin, pub] = await Promise.all([getAdminConfig(), getPublicConfig()])
@@ -131,9 +138,10 @@
 
   async function remove(i: number) {
     const label = entries[i].label.trim()
+    const body = "The storage is removed from the login page, along with any connection details stored for it."
     const ok = await confirm({
       title: `Delete ${label}?`,
-      body: "The storage is removed from the login page, along with any connection details stored for it.",
+      body: draft.dirty ? `${body} ${ALSO_SAVES}` : body,
       confirmLabel: "Delete",
       destructive: true,
     })
@@ -143,10 +151,21 @@
     await save()
   }
 
-  async function create(entry: StorageEntry) {
+  // false keeps the create dialog open
+  async function create(entry: StorageEntry): Promise<boolean> {
+    if (blocked) return false
+    if (draft.dirty) {
+      const ok = await confirm({
+        title: "Save other changes too?",
+        body: `Creating the storage saves the page. ${ALSO_SAVES}`,
+        confirmLabel: "Save all",
+      })
+      if (!ok) return false
+    }
     draft.value.storage.entries.push(entry)
     selected = draft.value.storage.entries.length - 1
-    await save()
+    void save()
+    return true
   }
 </script>
 
@@ -208,7 +227,11 @@
                 savedSignin={savedSignin.has(current.key)}
               />
               <div class="border-t pt-4">
-                <Button variant="destructive" onclick={() => remove(selected)} disabled={saving}>Delete storage</Button>
+                <Button variant="destructive" onclick={() => remove(selected)} disabled={saving || deleteBlocked !== ""}
+                  aria-describedby={deleteBlocked ? "delete-blocked" : undefined}>Delete storage</Button>
+                {#if deleteBlocked}
+                  <p id="delete-blocked" class="text-muted-foreground mt-2 text-sm">{deleteBlocked}</p>
+                {/if}
               </div>
             </div>
           {/key}
@@ -229,6 +252,7 @@
   {backends}
   method={storage.method}
   {entries}
+  {blocked}
   onCreate={create}
   {onOpenLoginMethod}
 />
