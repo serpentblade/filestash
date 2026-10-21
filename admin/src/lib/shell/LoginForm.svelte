@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "$lib/i18n"
   import { Button } from "$lib/components/ui/button"
   import { Input } from "$lib/components/ui/input"
   import { Label } from "$lib/components/ui/label"
@@ -20,7 +21,7 @@
       password = ""
     } catch (err) {
       const transport = err instanceof ApiError && (err.code === "NETWORK" || err.code === "SERVER")
-      error = transport ? (err as ApiError).message : "Incorrect password"
+      error = transport ? (err as ApiError).message : t("Incorrect password")
     } finally {
       busy = false
     }
@@ -28,7 +29,7 @@
 </script>
 
 <form class="flex flex-col gap-3" onsubmit={submit}>
-  <Label for="admin-password">Password</Label>
+  <Label for="admin-password">{t("Password")}</Label>
   <Input
     id="admin-password"
     type="password"
@@ -42,6 +43,6 @@
   {/if}
   <Button type="submit" disabled={busy || password === ""}>
     {#if busy}<Loader2Icon class="size-4 animate-spin" />{/if}
-    Log in
+    {t("Log in")}
   </Button>
 </form>

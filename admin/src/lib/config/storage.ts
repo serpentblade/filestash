@@ -1,4 +1,5 @@
 import type { Connection } from "$lib/types"
+import { t } from "$lib/i18n"
 
 export type { Connection } from "$lib/types"
 
@@ -177,9 +178,9 @@ export function mergeIdentity(fresh: IdentityProvider | undefined, edit: Identit
 
 export function validateLabel(label: string, others: string[]): string | null {
   const l = label.trim()
-  if (l === "") return "Name is required"
-  if (l.includes(",")) return "Name can't contain a comma"
-  if (others.some((o) => o.trim() === l)) return "Another storage already has this name"
+  if (l === "") return t("Name is required")
+  if (l.includes(",")) return t("Name can't contain a comma")
+  if (others.some((o) => o.trim() === l)) return t("Another storage already has this name")
   return null
 }
 

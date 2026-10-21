@@ -2,6 +2,7 @@
   import { onMount, tick } from "svelte"
   import { getLogs, logsUrl } from "$lib/api/endpoints"
   import { handlePollError, poll } from "$lib/hooks/poll"
+  import { t } from "$lib/i18n"
   import { Button } from "$lib/components/ui/button"
 
   let text = $state("…")
@@ -32,11 +33,11 @@
 </script>
 
 <div class="space-y-3">
-  {#if failed}<p class="text-destructive text-sm">Couldn't load logs</p>{/if}
+  {#if failed}<p class="text-destructive text-sm">{t("Couldn't load logs")}</p>{/if}
   <pre
     bind:this={pre}
     onmouseenter={() => (hovered = true)}
     onmouseleave={() => (hovered = false)}
     class="bg-muted h-[350px] overflow-auto rounded-md p-3 text-xs">{text}</pre>
-  <Button variant="outline" href={logsUrl()} download={filename}>Download</Button>
+  <Button variant="outline" href={logsUrl()} download={filename}>{t("Download")}</Button>
 </div>

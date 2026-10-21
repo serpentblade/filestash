@@ -17,6 +17,7 @@
     type StorageState,
   } from "$lib/config/storage"
   import { href } from "$lib/router"
+  import { t, storageName, methodName } from "$lib/i18n"
   import { createDraft } from "$lib/draft.svelte"
   import { confirm } from "$lib/confirm.svelte"
   import type { Schema } from "$lib/types"
@@ -58,11 +59,11 @@
   // Save is blocked while any name is invalid; the message names the card to fix
   function blockReason(list: StorageEntry[]): string {
     const d = duplicateLabels(list)
-    if (d.size > 0) return `Two storages are named "${[...d][0]}". Rename one to save.`
+    if (d.size > 0) return t("Two storages are named \"{{NAME}}\". Rename one to save.", { NAME: [...d][0] })
     for (let i = 0; i < list.length; i++) {
       const others = list.filter((_, j) => j !== i).map((e) => e.label)
       const err = validateLabel(list[i].label, others)
-      if (err) return `Storage ${i + 1} (${list[i].type}): ${err}`
+      if (err) return t("Storage {{NUMBER}} ({{TYPE}}): {{ERROR}}", { NUMBER: i + 1, TYPE: storageName(list[i].type), ERROR: err })
     }
     return ""
   }
@@ -70,9 +71,7 @@
   // deleting saves, so it is allowed while blocked only if removing the entry clears the block
   const deleteBlocked = $derived(blocked && blockReason(entries.filter((_, j) => j !== selected)))
 
-  const ALSO_SAVES = "This also saves your other unsaved changes."
-
-  async function fetchState(): Promise<Draft> {
+    async function fetchState(): Promise<Draft> {
     const [admin, pub] = await Promise.all([getAdminConfig(), getPublicConfig()])
     const mw = toValues(admin).middleware as Middleware
     return { storage: loadStorage(pub.connections ?? [], mw), removeLeftovers: false }
@@ -128,10 +127,10 @@
           return { values: { ...values, middleware }, connections: out.connections }
         })
       } catch (err) {
-        toast.error(`Couldn't save: ${err instanceof Error ? err.message : String(err)}`)
+        toast.error(t("Couldn't save: {{VALUE}}", err instanceof Error ? err.message : String(err)))
         throw err
       }
-      toast.success("Saved")
+      toast.success(t("Saved"))
       try {
         const next = await fetchState()
         adopt(next)
@@ -152,11 +151,11 @@
 
   async function remove(i: number) {
     const label = entries[i].label.trim()
-    const body = "The storage is removed from the login page, along with any connection details stored for it."
+    const body = t("The storage is removed from the login page, along with any connection details stored for it.")
     const ok = await confirm({
-      title: `Delete ${label}?`,
-      body: draft.dirty ? `${body} ${ALSO_SAVES}` : body,
-      confirmLabel: "Delete",
+      title: t("Delete {{VALUE}}?", label),
+      body: draft.dirty ? `${body} ${t("This also saves your other unsaved changes.")}` : body,
+      confirmLabel: t("Delete"),
       destructive: true,
     })
     if (!ok) return
@@ -170,9 +169,9 @@
     if (blocked) return false
     if (draft.dirty) {
       const ok = await confirm({
-        title: "Save other changes too?",
-        body: `Creating the storage saves the page. ${ALSO_SAVES}`,
-        confirmLabel: "Save all",
+        title: t("Save other changes too?"),
+        body: `${t("Creating the storage saves the page.")} ${t("This also saves your other unsaved changes.")}`,
+        confirmLabel: t("Save all"),
       })
       if (!ok) return false
     }
@@ -184,17 +183,17 @@
 </script>
 
 <div class="flex min-h-full flex-col">
-  <h1 class="mb-6 text-2xl font-semibold">Storage</h1>
+  <h1 class="mb-6 text-2xl font-semibold">{t("Storage")}</h1>
 
   {#if status === "loading"}
-    <div class="space-y-2" role="status" aria-label="Loading">
+    <div class="space-y-2" role="status" aria-label={t("Loading")}>
       <Skeleton class="h-14 w-full max-w-xs" />
       <Skeleton class="h-14 w-full max-w-xs" />
     </div>
   {:else if status === "failed"}
     <div class="space-y-3">
-      <p>Couldn't load the storage settings.</p>
-      <Button onclick={load}>Retry</Button>
+      <p>{t("Couldn't load the storage settings.")}</p>
+      <Button onclick={load}>{t("Retry")}</Button>
     </div>
   {:else}
     <div class="grid flex-1 gap-6 md:grid-cols-[18rem_1fr]">
@@ -205,7 +204,7 @@
           removing={draft.value.removeLeftovers}
           onRemove={() => (draft.value.removeLeftovers = true)}
         />
-        <ul class="space-y-2" aria-label="Storages">
+        <ul class="space-y-2" aria-label={t("Storages")}>
           {#each entries as entry, i (entry.key)}
             <li>
               <StorageCard
@@ -218,13 +217,13 @@
             </li>
           {/each}
         </ul>
-        <Button variant="outline" class="w-full" aria-label="Add storage" disabled={saving}
+        <Button variant="outline" class="w-full" aria-label={t("Add storage")} disabled={saving}
           onclick={() => (creating = true)}>
           <PlusIcon />
         </Button>
         <p class="text-muted-foreground text-sm">
-          Login method: {storage.method ?? "None"} ·
-          <a class="underline" data-link href={href("admin/authentication")}>change</a>
+          {t("Login method: {{VALUE}}", methodName(storage.method))} ·
+          <a class="underline" data-link href={href("admin/authentication")}>{t("change")}</a>
         </p>
       </div>
 
@@ -242,7 +241,7 @@
               />
               <div class="border-t pt-4">
                 <Button variant="destructive" onclick={() => remove(selected)} disabled={saving || deleteBlocked !== ""}
-                  aria-describedby={deleteBlocked ? "delete-blocked" : undefined}>Delete storage</Button>
+                  aria-describedby={deleteBlocked ? "delete-blocked" : undefined}>{t("Delete storage")}</Button>
                 {#if deleteBlocked}
                   <p id="delete-blocked" class="text-muted-foreground mt-2 text-sm">{deleteBlocked}</p>
                 {/if}
@@ -250,7 +249,7 @@
             </div>
           {/key}
         {:else}
-          <p class="text-muted-foreground">No storage yet. Use + to add one.</p>
+          <p class="text-muted-foreground">{t("No storage yet. Use + to add one.")}</p>
         {/if}
       </div>
     </div>

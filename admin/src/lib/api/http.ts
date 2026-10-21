@@ -1,3 +1,5 @@
+import { t } from '$lib/i18n'
+
 export type ApiErrorCode = 'FORBIDDEN' | 'NOT_ALLOWED' | 'SERVER' | 'NETWORK' | 'OTHER'
 
 export class ApiError extends Error {
@@ -30,7 +32,7 @@ export async function send(method: Method, path: string, body?: unknown): Promis
   try {
     res = await fetch(apiUrl(path), init)
   } catch (e) {
-    throw new ApiError('NETWORK', e instanceof Error ? e.message : 'Network error')
+    throw new ApiError('NETWORK', e instanceof Error ? e.message : t('Network error'))
   }
   if (res.ok) return res
   const message = await errorMessage(res)
@@ -46,7 +48,7 @@ async function errorMessage(res: Response): Promise<string> {
     const j = JSON.parse(text)
     if (j && typeof j.message === 'string') return j.message
   } catch { /* not JSON */ }
-  return text || res.statusText || `HTTP ${res.status}`
+  return text || res.statusText || t("HTTP {{VALUE}}", res.status)
 }
 
 export async function request<T>(
@@ -62,9 +64,9 @@ export async function request<T>(
   try {
     json = JSON.parse(text)
   } catch {
-    throw new ApiError('OTHER', 'Invalid response', res.status)
+    throw new ApiError('OTHER', t('Invalid response'), res.status)
   }
   if (json.status === 'ok') return json.result as T
-  const message = json.message ?? 'Unknown error'
+  const message = json.message ?? t('Unknown error')
   throw new ApiError(message === 'Not Allowed' ? 'NOT_ALLOWED' : 'OTHER', message, res.status)
 }

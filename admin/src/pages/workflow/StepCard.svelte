@@ -5,6 +5,7 @@
   import { Button } from "$lib/components/ui/button"
   import * as Card from "$lib/components/ui/card"
   import { cn } from "$lib/utils"
+  import { t } from "$lib/i18n"
 
   let { name, spec, values = $bindable({}), open = false, prefix, onRemove, onMove, canMoveUp = false, canMoveDown = false, dragging = false, onDragStart, onDragOver, onDragEnd }: {
     name: string
@@ -53,7 +54,7 @@
         <span
           role="button"
           tabindex="-1"
-          aria-label="Drag to reorder"
+          aria-label={t("Drag to reorder")}
           class="text-muted-foreground cursor-grab"
           draggable="true"
           ondragstart={dragStart}
@@ -65,19 +66,19 @@
       {/if}
       <div class="min-w-0 flex-1">
         <Card.Title class="truncate text-sm">
-          {#if spec}{label}{:else}Not found "{name}"{/if}
+          {#if spec}{label}{:else}{t('Not found "{{VALUE}}"', name)}{/if}
           {#if detail}<span class="text-muted-foreground font-normal">{detail}</span>{/if}
         </Card.Title>
       </div>
       {#if onMove}
-        <Button variant="ghost" size="icon-sm" aria-label="Move up" disabled={!canMoveUp} onclick={() => onMove(-1)}><ChevronUp /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Move down" disabled={!canMoveDown} onclick={() => onMove(1)}><ChevronDown /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label={t("Move up")} disabled={!canMoveUp} onclick={() => onMove(-1)}><ChevronUp /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label={t("Move down")} disabled={!canMoveDown} onclick={() => onMove(1)}><ChevronDown /></Button>
       {/if}
       {#if configurable}
-        <Button variant="ghost" size="icon-sm" aria-label="Configure {label}" aria-expanded={expanded} onclick={() => (expanded = !expanded)}><Settings2 /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label={t("Configure {{VALUE}}", label)} aria-expanded={expanded} onclick={() => (expanded = !expanded)}><Settings2 /></Button>
       {/if}
       {#if onRemove}
-        <Button variant="ghost" size="icon-sm" aria-label="Remove {label}" onclick={onRemove}><X /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label={t("Remove {{VALUE}}", label)} onclick={onRemove}><X /></Button>
       {/if}
     </Card.Header>
     {#if spec && configurable && expanded}

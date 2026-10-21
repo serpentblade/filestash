@@ -3,6 +3,7 @@
   import { getAudit } from "$lib/api/endpoints"
   import { toValues, type Schema } from "$lib/config/schema"
   import SchemaForm from "$lib/components/SchemaForm.svelte"
+  import { t } from "$lib/i18n"
   import { Skeleton } from "$lib/components/ui/skeleton"
 
   let form = $state<Schema | null>(null)
@@ -61,7 +62,7 @@
 </script>
 
 {#if failed}
-  <p class="text-destructive text-sm">Couldn't load the audit report.</p>
+  <p class="text-destructive text-sm">{t("Couldn't load the audit report.")}</p>
 {:else if form}
   <div class="space-y-4">
     <SchemaForm schema={form} bind:values />

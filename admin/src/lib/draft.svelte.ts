@@ -1,4 +1,5 @@
 import { addGuard } from "$lib/router"
+import { t } from "$lib/i18n"
 import { confirm } from "$lib/confirm.svelte"
 
 const isPlain = (v: unknown): v is Record<string, unknown> =>
@@ -26,9 +27,9 @@ export function createDraft<T>(initial: T) {
     isDirty: dirty,
     confirm: () =>
       confirm({
-        title: "Discard unsaved changes?",
-        body: "You have unsaved changes on this page. Leave without saving?",
-        confirmLabel: "Discard",
+        title: t("Discard unsaved changes?"),
+        body: t("You have unsaved changes on this page. Leave without saving?"),
+        confirmLabel: t("Discard"),
         destructive: true,
       }),
   })

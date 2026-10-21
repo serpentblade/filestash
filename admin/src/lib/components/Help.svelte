@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "$lib/i18n"
   import { marked } from "marked"
   import * as Collapsible from "$lib/components/ui/collapsible"
   import { Button } from "$lib/components/ui/button"
@@ -13,7 +14,7 @@
   <Collapsible.Root class={className}>
     <Collapsible.Trigger>
       {#snippet child({ props })}
-        <Button {...props} variant="link" size="sm" class="h-auto p-0">How to…</Button>
+        <Button {...props} variant="link" size="sm" class="h-auto p-0">{t("How to…")}</Button>
       {/snippet}
     </Collapsible.Trigger>
     <Collapsible.Content>

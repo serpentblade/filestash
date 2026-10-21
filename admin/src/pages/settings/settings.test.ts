@@ -44,7 +44,7 @@ describe("settings page", () => {
   it("save sends only owned keys and preserves middleware", async () => {
     vi.mocked(api.getAdminConfig).mockResolvedValue(config() as never)
     render(SettingsPage)
-    const name = await screen.findByLabelText("name")
+    const name = await screen.findByLabelText("Name")
     await fireEvent.input(name, { target: { value: "Renamed" } })
     await fireEvent.click(await screen.findByRole("button", { name: "Save" }))
     await waitFor(() => expect(api.postConfig).toHaveBeenCalled())
@@ -60,7 +60,7 @@ describe("settings page", () => {
     const admin = vi.mocked(api.getAdminConfig)
     admin.mockResolvedValueOnce(config() as never)
     render(SettingsPage)
-    const name = await screen.findByLabelText("name")
+    const name = await screen.findByLabelText("Name")
     // someone else changed the password after this page loaded
     admin.mockResolvedValue(config("$2a$10$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb") as never)
     await fireEvent.input(name, { target: { value: "Renamed" } })

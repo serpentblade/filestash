@@ -21,7 +21,8 @@
   import { Label } from "$lib/components/ui/label"
   import { cn } from "$lib/utils"
   import ToastHtml from "./ToastHtml.svelte"
-  import { PRESETS, applyPresetInputs, healthChecks, presetAvailable, presetFields, type Preset } from "./presets"
+  import { fieldLabel, t } from "$lib/i18n"
+  import { PRESETS, applyPresetInputs, healthChecks, presetAvailable, presetFields, presetName, presetSuccess, type Preset } from "./presets"
 
   let step = $state<1 | 2 | null>(null)
   let loadError = $state("")
@@ -51,7 +52,7 @@
       step = asked === 1 || asked === 2 ? asked : values.auth?.admin ? 2 : 1
     } catch (err) {
       started = false
-      loadError = err instanceof Error ? err.message : "Can't reach the server"
+      loadError = err instanceof Error ? err.message : t("Can't reach the server")
     }
   }
 
@@ -74,7 +75,7 @@
       connections = pub.connections
       depsReady = true
     } catch (err) {
-      loadError = err instanceof Error ? err.message : "Can't reach the server"
+      loadError = err instanceof Error ? err.message : t("Can't reach the server")
     }
   }
 
@@ -99,14 +100,14 @@
       try {
         await session.login(password)
       } catch {
-        pwdError = "Password set. Log in to continue."
+        pwdError = t("Password set. Log in to continue.")
         return
       }
       pwd = password
       password = ""
       step = 2
     } catch (err) {
-      pwdError = err instanceof Error ? err.message : "Could not set the password"
+      pwdError = err instanceof Error ? err.message : t("Could not set the password")
     } finally {
       pwdBusy = false
     }
@@ -155,9 +156,9 @@
   async function run(p: Preset) {
     if (connections.length > 0) {
       const ok = await confirm({
-        title: "Replace your existing storages?",
-        body: `This preset replaces your current storages (${connections.map((c) => c.label).join(", ")}) and the login method.`,
-        confirmLabel: "Replace",
+        title: t("Replace your existing storages?"),
+        body: t("This preset replaces your current storages ({{VALUE}}) and the login method.", connections.map((c) => c.label).join(", ")),
+        confirmLabel: t("Replace"),
         destructive: true,
       })
       if (!ok) return
@@ -178,9 +179,9 @@
         return { values, connections: out.connections }
       })
       connections = out.connections
-      toast.success(ToastHtml, { componentProps: { html: p.success } })
+      toast.success(ToastHtml, { componentProps: { html: presetSuccess(p) } })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not apply the preset")
+      toast.error(err instanceof Error ? err.message : t("Could not apply the preset"))
     }
   }
 
@@ -223,34 +224,38 @@
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save the telemetry choice")
+      toast.error(err instanceof Error ? err.message : t("Could not save the telemetry choice"))
     }
   }
+  // one sentence around the link, so a translation can move the link
+  const [moreBefore, moreAfter = ""] = t(
+    "Want more? Head to {{LINK}} to wire up your own storage, authentication via SSO, and RBAC authorization.",
+  ).split("{{LINK}}")
 </script>
 
 <div class="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center gap-6 p-6">
   {#if loadError}
     <div class="flex flex-col items-start gap-3" role="alert">
       <p>{loadError}</p>
-      <Button onclick={() => { loadError = ""; if (step === null) void init(); else void loadDeps() }}>Retry</Button>
+      <Button onclick={() => { loadError = ""; if (step === null) void init(); else void loadDeps() }}>{t("Retry")}</Button>
     </div>
   {:else if step === null}
-    <div role="status" aria-label="Loading" class="flex justify-center"><Loader2Icon class="size-6 animate-spin" /></div>
+    <div role="status" aria-label={t("Loading")} class="flex justify-center"><Loader2Icon class="size-6 animate-spin" /></div>
   {:else if step === 1}
-    <h1 class="text-2xl font-semibold">Welcome Aboard!</h1>
+    <h1 class="text-2xl font-semibold">{t("Welcome Aboard!")}</h1>
     <form class="flex flex-col gap-3" onsubmit={setPassword}>
-      <Label for="setup-password">First thing first, setup your password:</Label>
+      <Label for="setup-password">{t("First thing first, setup your password:")}</Label>
       <div class="flex gap-2">
         <Input
           id="setup-password"
           type="password"
-          placeholder="Password"
+          placeholder={t("Password")}
           autocomplete="new-password"
           bind:value={password}
           disabled={pwdBusy || hashSaved}
           aria-invalid={pwdError ? true : undefined}
         />
-        <Button type="submit" size="icon" aria-label={hashSaved ? "Log in" : "Continue"} disabled={pwdBusy || password === ""}>
+        <Button type="submit" size="icon" aria-label={hashSaved ? t("Log in") : t("Continue")} disabled={pwdBusy || password === ""}>
           {#if pwdBusy}<Loader2Icon class="size-4 animate-spin" />{:else}<ArrowRightIcon class="size-4" />{/if}
         </Button>
       </div>
@@ -258,13 +263,13 @@
     </form>
   {:else}
     <h1 class="flex items-center gap-2 text-2xl font-semibold">
-      <Button variant="ghost" size="icon" aria-label="Previous step" onclick={() => leave(() => (step = 1))}>
+      <Button variant="ghost" size="icon" aria-label={t("Previous step")} onclick={() => leave(() => (step = 1))}>
         <ArrowLeftIcon class="size-4" />
       </Button>
-      You're at the Helm now
+      {t("You're at the Helm now")}
     </h1>
     {#if !depsReady}
-      <div role="status" aria-label="Loading" class="flex justify-center"><Loader2Icon class="size-6 animate-spin" /></div>
+      <div role="status" aria-label={t("Loading")} class="flex justify-center"><Loader2Icon class="size-6 animate-spin" /></div>
     {:else}
       <ul class="space-y-3">
         {#each checks as check (check.key)}
@@ -283,20 +288,20 @@
                 {#each PRESETS as preset (preset.name)}
                   <div class="flex items-center gap-2">
                     <Button variant="outline" size="sm" class="uppercase" disabled={applying} onclick={() => applyPreset(preset)}>
-                      Apply preset
+                      {t("Apply preset")}
                     </Button>
-                    <span>&#x27A1; {preset.name}</span>
+                    <span>&#x27A1; {presetName(preset)}</span>
                   </div>
                 {/each}
                 <p class="mt-2 rounded-md border border-dashed p-2 italic">
-                  Notes: Templates get you started quickly, but they're just scratching the surface.
-                  Want more? Head to
+                  {t("Notes: Templates get you started quickly, but they're just scratching the surface.")}
+                  {moreBefore}
                   <a
                     class="underline"
                     href={href("admin/storage")}
                     onclick={(e) => { e.preventDefault(); void leave(() => void navigate("admin/storage")) }}
                   >/admin/storage</a>
-                  to wire up your own storage, authentication via SSO, and RBAC authorization.
+                  {moreAfter}
                 </p>
               </div>
             {:else if !check.pass}
@@ -306,7 +311,7 @@
         {/each}
       </ul>
       <div>
-        <Button onclick={() => leave(() => void navigate("admin/storage"))}>Continue to admin</Button>
+        <Button onclick={() => leave(() => void navigate("admin/storage"))}>{t("Continue to admin")}</Button>
       </div>
     {/if}
   {/if}
@@ -315,10 +320,10 @@
 <Dialog.Root open={missingOpen} onOpenChange={(o) => (missingOpen = o)}>
   <Dialog.Content>
     <Dialog.Header>
-      <Dialog.Title>Preset unavailable</Dialog.Title>
-      <Dialog.Description>Your build is missing some plugins. Contact Support</Dialog.Description>
+      <Dialog.Title>{t("Preset unavailable")}</Dialog.Title>
+      <Dialog.Description>{t("Your build is missing some plugins. Contact Support")}</Dialog.Description>
     </Dialog.Header>
-    <Dialog.Footer><Button onclick={() => (missingOpen = false)}>OK</Button></Dialog.Footer>
+    <Dialog.Footer><Button onclick={() => (missingOpen = false)}>{t("OK")}</Button></Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
@@ -329,18 +334,18 @@
       onsubmit={(e) => { e.preventDefault(); if (inputsFilled) settleInputs($state.snapshot(inputValues)) }}
     >
       <Dialog.Header>
-        <Dialog.Title>{inputPreset?.name}</Dialog.Title>
-        <Dialog.Description>Fill in the values this preset needs.</Dialog.Description>
+        <Dialog.Title>{inputPreset ? presetName(inputPreset) : ""}</Dialog.Title>
+        <Dialog.Description>{t("Fill in the values this preset needs.")}</Dialog.Description>
       </Dialog.Header>
       {#each inputFields as field (field)}
         <div class="space-y-1">
-          <Label for={`preset-${field}`}>{field}</Label>
+          <Label for={`preset-${field}`}>{fieldLabel(field)}</Label>
           <Input id={`preset-${field}`} type="text" bind:value={inputValues[field]} />
         </div>
       {/each}
       <Dialog.Footer>
-        <Button type="button" variant="outline" onclick={() => settleInputs(null)}>Cancel</Button>
-        <Button type="submit" disabled={!inputsFilled}>Apply</Button>
+        <Button type="button" variant="outline" onclick={() => settleInputs(null)}>{t("Cancel")}</Button>
+        <Button type="submit" disabled={!inputsFilled}>{t("Apply")}</Button>
       </Dialog.Footer>
     </form>
   </Dialog.Content>
@@ -349,9 +354,9 @@
 <Dialog.Root open={telemetryOpen} onOpenChange={(o) => { if (!o) settleTelemetry(false) }}>
   <Dialog.Content>
     <Dialog.Header>
-      <Dialog.Title>Telemetry</Dialog.Title>
+      <Dialog.Title>{t("Telemetry")}</Dialog.Title>
       <Dialog.Description>
-        Help making this software better by sending crash reports and anonymous usage statistics
+        {t("Help making this software better by sending crash reports and anonymous usage statistics")}
       </Dialog.Description>
     </Dialog.Header>
     <div class="flex items-center gap-2 text-sm">
@@ -360,10 +365,10 @@
         bind:checked={telemetryChecked}
         onCheckedChange={(v) => { if (v) settleTelemetry(true) }}
       />
-      <Label for="telemetry-ok">The data is never shared with a third party.</Label>
+      <Label for="telemetry-ok">{t("The data is never shared with a third party.")}</Label>
     </div>
     <Dialog.Footer>
-      <Button onclick={() => settleTelemetry(telemetryChecked)}>OK</Button>
+      <Button onclick={() => settleTelemetry(telemetryChecked)}>{t("OK")}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

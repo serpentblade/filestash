@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "$lib/i18n"
   import { onDestroy, onMount } from "svelte"
   import { toast } from "svelte-sonner"
   import { getAdminConfig } from "$lib/api/endpoints"
@@ -52,19 +53,19 @@
           return { values: { ...values, ...owned }, connections }
         })
       } catch (err) {
-        toast.error(`Couldn't save: ${err instanceof Error ? err.message : String(err)}`)
+        toast.error(t("Couldn't save: {{VALUE}}", err instanceof Error ? err.message : String(err)))
         throw err
       }
-      toast.success("Saved")
+      toast.success(t("Saved"))
       loadedHash = adminHash(v)
     })
     saving = false
   }
 </script>
 
-<h1 class="mb-6 text-2xl font-semibold">Settings</h1>
+<h1 class="mb-6 text-2xl font-semibold">{t("Settings")}</h1>
 {#if failed}
-  <p class="text-destructive text-sm">Couldn't load the settings.</p>
+  <p class="text-destructive text-sm">{t("Couldn't load the settings.")}</p>
 {:else if schema}
   <SchemaForm {schema} bind:values={draft.value} />
   <SaveBar dirty={draft.dirty} {saving} onSave={save} onDiscard={() => draft.reset()} />

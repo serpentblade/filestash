@@ -41,7 +41,7 @@ describe("audit", () => {
   it("re-queries 1000ms after the last edit with search. stripped", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     render(Audit)
-    const q = await screen.findByLabelText("q")
+    const q = await screen.findByLabelText("Q")
     expect(api.getAudit).toHaveBeenCalledTimes(1)
     await fireEvent.input(q, { target: { value: "a" } })
     await vi.advanceTimersByTimeAsync(600)
@@ -57,7 +57,7 @@ describe("audit", () => {
   it("ignores a stale response", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     render(Audit)
-    const q = await screen.findByLabelText("q")
+    const q = await screen.findByLabelText("Q")
     let slow!: (v: never) => void
     vi.mocked(api.getAudit).mockImplementationOnce(() => new Promise((r) => (slow = r as never)))
     await fireEvent.input(q, { target: { value: "a" } })
@@ -84,7 +84,7 @@ describe("log settings", () => {
     vi.mocked(api.getPublicConfig).mockResolvedValue({ connections: [], auth: [] })
     vi.mocked(api.postConfig).mockResolvedValue(undefined)
     render(LogSettings)
-    await fireEvent.input(await screen.findByLabelText("level"), { target: { value: "DEBUG" } })
+    await fireEvent.input(await screen.findByLabelText("Level"), { target: { value: "DEBUG" } })
     const fresh = cfg() as Record<string, any>
     fresh.general.name.value = "Changed elsewhere"
     vi.mocked(api.getAdminConfig).mockResolvedValue(fresh as never)

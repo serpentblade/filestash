@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "$lib/i18n"
   import * as AlertDialog from "$lib/components/ui/alert-dialog"
   import { confirmState, settle } from "$lib/confirm.svelte"
 
@@ -13,7 +14,7 @@
       <AlertDialog.Description>{cur?.body}</AlertDialog.Description>
     </AlertDialog.Header>
     <AlertDialog.Footer>
-      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Cancel>{t("Cancel")}</AlertDialog.Cancel>
       <AlertDialog.Action variant={cur?.destructive ? "destructive" : "default"} onclick={() => settle(true)}>
         {cur?.confirmLabel}
       </AlertDialog.Action>

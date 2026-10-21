@@ -145,7 +145,7 @@ describe("setup page", () => {
   it("asks for inputs before applying a preset that needs them", async () => {
     await step2()
     await fireEvent.click(presetButton(2))
-    await fireEvent.input(await screen.findByLabelText("sftp_hostname"), { target: { value: "host" } })
+    await fireEvent.input(await screen.findByLabelText("SFTP Hostname"), { target: { value: "host" } })
     await fireEvent.click(screen.getByRole("button", { name: "Apply" }))
     await waitFor(() => expect(api.postConfig).toHaveBeenCalled())
     expect(JSON.parse(posted().middleware.attribute_mapping.params).sftp.hostname).toBe("host")
