@@ -2,13 +2,14 @@
   import { onDestroy, onMount } from "svelte"
   import { toast } from "svelte-sonner"
   import PlusIcon from "@lucide/svelte/icons/plus"
-  import { getAdminConfig, getBackends, getPublicConfig } from "$lib/api/endpoints"
+  import { getAdminConfig, getAuthMiddlewares, getBackends, getPublicConfig } from "$lib/api/endpoints"
   import { saveConfig } from "$lib/config/save"
   import { toValues } from "$lib/config/schema"
   import {
     duplicateLabels,
     loadStorage,
     saveStorage,
+    setMethod,
     validateLabel,
     type Middleware,
     type StorageEntry,
@@ -24,9 +25,8 @@
   import StorageForm from "./StorageForm.svelte"
   import CreateStorageDialog from "./CreateStorageDialog.svelte"
   import LeftoversNotice from "./LeftoversNotice.svelte"
-
-  // Task 10 passes the login-method popup opener; without it "configure" is disabled
-  let { onOpenLoginMethod }: { onOpenLoginMethod?: () => void } = $props()
+  import LoginMethodDialog from "./LoginMethodDialog.svelte"
+  import { methodVariables } from "./method"
 
   type Draft = { storage: StorageState; removeLeftovers: boolean }
 
@@ -42,12 +42,16 @@
   let status = $state<"loading" | "failed" | "ready">("loading")
   let selected = $state(0)
   let creating = $state(false)
+  let methodOpen = $state(false)
+  let middlewares = $state<Record<string, Schema>>({})
   let saving = $state(false)
   // keys of entries the server has in sign-in mode, to warn before their details are dropped
   let savedSignin = $state<Set<string>>(new Set())
 
   const storage = $derived(draft.value.storage)
   const entries = $derived(storage.entries)
+  const onOpenLoginMethod = () => (methodOpen = true)
+  const variables = $derived(methodVariables(storage.method === null ? undefined : middlewares[storage.method]))
   const dups = $derived(duplicateLabels(entries))
   const current = $derived(entries[selected] as StorageEntry | undefined)
   const othersOf = (i: number) => entries.filter((_, j) => j !== i).map((e) => e.label)
@@ -82,8 +86,10 @@
   async function load() {
     status = "loading"
     try {
-      const [b, next] = await Promise.all([getBackends(), fetchState()])
+      // the login methods only feed the picker and the variables hint, so the page loads without them
+      const [b, next, mw] = await Promise.all([getBackends(), fetchState(), getAuthMiddlewares().catch(() => ({}))])
       backends = b
+      middlewares = mw
       adopt(next)
       draft.reset(next)
       selected = 0
@@ -105,8 +111,8 @@
     })),
   })
 
-  async function save() {
-    if (blocked) return
+  async function save(): Promise<boolean> {
+    if (blocked) return false
     saving = true
     const ok = await draft.save(async (v) => {
       try {
@@ -129,6 +135,22 @@
     })
     saving = false
     if (ok) clamp()
+    return ok
+  }
+
+  // false keeps the login method dialog open
+  async function applyMethod(method: string | null, params: Record<string, string>): Promise<boolean> {
+    if (blocked) return false
+    if (draft.dirty) {
+      const ok = await confirm({
+        title: "Save other changes too?",
+        body: `Changing the login method saves the page. ${ALSO_SAVES}`,
+        confirmLabel: "Save all",
+      })
+      if (!ok) return false
+    }
+    draft.value.storage = setMethod($state.snapshot(draft.value.storage) as StorageState, method, params)
+    return save()
   }
 
   function discard() {
@@ -208,7 +230,7 @@
         </Button>
         <p class="text-muted-foreground text-sm">
           Login method: {storage.method ?? "None"} ·
-          <Button variant="link" size="xs" class="h-auto p-0" disabled={!onOpenLoginMethod} onclick={() => onOpenLoginMethod?.()}>
+          <Button variant="link" size="xs" class="h-auto p-0" onclick={onOpenLoginMethod}>
             configure
           </Button>
         </p>
@@ -224,6 +246,7 @@
                 method={storage.method}
                 otherLabels={othersOf(selected)}
                 {onOpenLoginMethod}
+                {variables}
                 savedSignin={savedSignin.has(current.key)}
               />
               <div class="border-t pt-4">
@@ -255,4 +278,7 @@
   {blocked}
   onCreate={create}
   {onOpenLoginMethod}
+  {variables}
 />
+
+<LoginMethodDialog bind:open={methodOpen} state={storage} {middlewares} {blocked} onApply={applyMethod} />

@@ -8,7 +8,7 @@
   import { cn } from "$lib/utils"
   import StorageForm from "./StorageForm.svelte"
 
-  let { open = $bindable(false), backends, method, entries, blocked = "", onCreate, onOpenLoginMethod }: {
+  let { open = $bindable(false), backends, method, entries, blocked = "", onCreate, onOpenLoginMethod, variables }: {
     open?: boolean
     backends: Record<string, Schema>
     method: string | null
@@ -18,6 +18,7 @@
     // resolves false to keep the dialog open
     onCreate: (entry: StorageEntry) => Promise<boolean>
     onOpenLoginMethod?: () => void
+    variables?: string[]
   } = $props()
 
   let entry = $state<StorageEntry | null>(null)
@@ -104,6 +105,7 @@
         {method}
         {otherLabels}
         {onOpenLoginMethod}
+        {variables}
       />
     {/if}
 
