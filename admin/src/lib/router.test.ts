@@ -46,6 +46,10 @@ describe("parseRoute", () => {
     )
   })
 
+  it("malformed percent escape returns null without throwing", () => {
+    expect(parseRoute("/admin/workflow/%E0%A4%A", "", "http://h/")).toBeNull()
+  })
+
   it("unknown path returns null", () => {
     expect(parseRoute("/nope", "", "http://h/")).toBeNull()
     expect(parseRoute("/admin/zzz", "", "http://h/")).toBeNull()
@@ -130,5 +134,31 @@ describe("navigate", () => {
     await new Promise((r) => setTimeout(r, 0))
     expect(location.pathname).toBe("/admin/storage")
     a.remove()
+  })
+
+  describe("popstate", () => {
+    const pop = async () => {
+      window.dispatchEvent(new PopStateEvent("popstate"))
+      await new Promise((r) => setTimeout(r, 0))
+    }
+
+    it("restores the url when a dirty guard cancels", async () => {
+      await navigate("admin/about")
+      const before = get(route)
+      off = addGuard({ isDirty: () => true, confirm: async () => false })
+      history.replaceState(null, "", "/admin/settings")
+      await pop()
+      expect(get(route)).toBe(before)
+      expect(location.pathname).toBe("/admin/about")
+    })
+
+    it("updates the route when the dirty guard confirms", async () => {
+      await navigate("admin/about")
+      off = addGuard({ isDirty: () => true, confirm: async () => true })
+      history.replaceState(null, "", "/admin/settings")
+      await pop()
+      expect(get(route)?.name).toBe("settings")
+      expect(location.pathname).toBe("/admin/settings")
+    })
   })
 })

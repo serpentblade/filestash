@@ -60,7 +60,11 @@ export function parseRoute(pathname: string, search: string, baseURI: string): R
         : make("workflow-new", { specs })
     }
     if (sub === "new") return make("workflow-new")
-    return make("workflow-edit", { id: decodeURIComponent(sub) })
+    try {
+      return make("workflow-edit", { id: decodeURIComponent(sub) })
+    } catch {
+      return null
+    }
   }
   if (sub !== undefined) return null
   return page in PAGES ? make(PAGES[page]) : null
@@ -83,14 +87,35 @@ export function addGuard(g: Guard): () => void {
   }
 }
 
+let lastUrl = ""
+
 function sync() {
+  lastUrl = location.pathname + location.search
   route.set(parseRoute(location.pathname, location.search, document.baseURI))
 }
 
-export async function navigate(path: string, opts: { replace?: boolean } = {}): Promise<boolean> {
+async function confirmLeave(): Promise<boolean> {
   for (const g of [...guards]) {
     if (g.isDirty() && !(await g.confirm())) return false
   }
+  return true
+}
+
+let checking = false
+
+async function onPopState() {
+  if (checking) return
+  checking = true
+  try {
+    if (await confirmLeave()) sync()
+    else history.pushState(null, "", lastUrl)
+  } finally {
+    checking = false
+  }
+}
+
+export async function navigate(path: string, opts: { replace?: boolean } = {}): Promise<boolean> {
+  if (!(await confirmLeave())) return false
   const url = href(path)
   if (opts.replace) history.replaceState(null, "", url)
   else history.pushState(null, "", url)
@@ -110,7 +135,7 @@ export function safeNext(next: string | null, origin: string): string | null {
 
 if (typeof window !== "undefined") {
   sync()
-  window.addEventListener("popstate", sync)
+  window.addEventListener("popstate", () => void onPopState())
   window.addEventListener("beforeunload", (e) => {
     if ([...guards].some((g) => g.isDirty())) e.preventDefault()
   })
