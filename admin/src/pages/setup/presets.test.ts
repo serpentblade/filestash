@@ -18,6 +18,11 @@ describe("setup presets", () => {
     expect(out.connections).toEqual([{ type: "sftp", label: "sftp" }])
   })
 
+  it.each(["ab\\cd", "trail\\", "a\nb", 'a\\"b', 'q"uote'])("escaped value round-trips through JSON: %j", (v) => {
+    const out = applyPresetInputs(byName("S3 Storage - Multiple users"), { access_key_id: v, secret_access_key: v })
+    expect(JSON.parse(out.attribute_mapping.params).s3.secret_access_key).toBe(v)
+  })
+
   it("replaces placeholders in the identity provider params too", () => {
     const out = applyPresetInputs(byName("FTP Storage - WordPress Users"), {
       ftp_hostname: "h", ftp_username: "u", ftp_password: "p", wordpress_url: "https://w",

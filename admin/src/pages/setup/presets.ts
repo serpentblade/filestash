@@ -83,9 +83,9 @@ export function presetAvailable(p: Preset, backends: Record<string, unknown>, au
   return !!backends[p.isOK.storage] && !!auths[p.isOK.auth]
 }
 
-// The values land inside JSON strings, hence the quote escaping (as the original intends).
+// The values land inside JSON strings, so they are escaped as JSON string contents.
 const fill = (text: string, name: string, value: string) =>
-  text.replaceAll(`[[${name}]]`, () => value.replaceAll("\"", "\\\""))
+  text.replaceAll(`[[${name}]]`, () => JSON.stringify(value).slice(1, -1))
 
 export function applyPresetInputs(p: Preset, inputs: Record<string, string>, adminPassword?: string): PresetOutput {
   const values: Record<string, string> = { ...inputs }

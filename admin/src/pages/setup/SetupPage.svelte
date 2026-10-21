@@ -31,6 +31,8 @@
   let password = $state("")
   let pwdError = $state("")
   let pwdBusy = $state(false)
+  // once the hash is written, a retry must only log in: the config is no longer open to anonymous writes
+  let hashSaved = $state(false)
 
   // step 2
   let constant = $state({ user: "", license: "" })
@@ -59,7 +61,7 @@
 
   // Setting the password makes the session briefly report "not admin" until the login lands.
   $effect(() => {
-    if (session.isAdmin === false && !pwdBusy) redirect(href("admin/"))
+    if (session.isAdmin === false && !pwdBusy && !hashSaved) redirect(href("admin/"))
   })
 
   async function loadDeps() {
@@ -86,12 +88,20 @@
     pwdBusy = true
     pwdError = ""
     try {
-      const hash = bcrypt.hashSync(password)
-      await saveConfig(({ values, connections }) => {
-        ;(values.auth as Record<string, unknown>).admin = hash
-        return { values, connections }
-      })
-      await session.login(password)
+      if (!hashSaved) {
+        const hash = bcrypt.hashSync(password)
+        await saveConfig(({ values, connections }) => {
+          ;(values.auth as Record<string, unknown>).admin = hash
+          return { values, connections }
+        })
+        hashSaved = true
+      }
+      try {
+        await session.login(password)
+      } catch {
+        pwdError = "Password set. Log in to continue."
+        return
+      }
       pwd = password
       password = ""
       step = 2
@@ -134,6 +144,15 @@
       missingOpen = true
       return
     }
+    applying = true
+    try {
+      await run(p)
+    } finally {
+      applying = false
+    }
+  }
+
+  async function run(p: Preset) {
     if (connections.length > 0) {
       const ok = await confirm({
         title: "Replace your existing storages?",
@@ -151,7 +170,6 @@
       inputs = answered
     }
     const out = applyPresetInputs(p, inputs, pwd === "" ? undefined : pwd)
-    applying = true
     try {
       await saveConfig(({ values }) => {
         const middleware = values.middleware as Record<string, unknown>
@@ -163,8 +181,6 @@
       toast.success(ToastHtml, { componentProps: { html: p.success } })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not apply the preset")
-    } finally {
-      applying = false
     }
   }
 
@@ -179,7 +195,19 @@
     resolveTelemetry = null
   }
 
+  let leaving = false
   async function leave(action: () => void) {
+    if (leaving) return
+    leaving = true
+    try {
+      await ask()
+    } finally {
+      leaving = false
+    }
+    action()
+  }
+
+  async function ask() {
     let enabled = false
     try {
       const values = toValues(await getAdminConfig()) as { log?: { telemetry?: unknown } }
@@ -197,7 +225,6 @@
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save the telemetry choice")
     }
-    action()
   }
 </script>
 
@@ -220,10 +247,10 @@
           placeholder="Password"
           autocomplete="new-password"
           bind:value={password}
-          disabled={pwdBusy}
+          disabled={pwdBusy || hashSaved}
           aria-invalid={pwdError ? true : undefined}
         />
-        <Button type="submit" size="icon" aria-label="Continue" disabled={pwdBusy || password === ""}>
+        <Button type="submit" size="icon" aria-label={hashSaved ? "Log in" : "Continue"} disabled={pwdBusy || password === ""}>
           {#if pwdBusy}<Loader2Icon class="size-4 animate-spin" />{:else}<ArrowRightIcon class="size-4" />{/if}
         </Button>
       </div>

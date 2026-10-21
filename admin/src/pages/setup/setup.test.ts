@@ -97,6 +97,29 @@ describe("setup page", () => {
     expect(posted().constant).toBeUndefined()
   })
 
+  it("a login failure after the hash is saved retries login only", async () => {
+    vi.mocked(api.login).mockRejectedValueOnce(new Error("slow"))
+    render(SetupPage)
+    await fireEvent.input(await screen.findByPlaceholderText("Password"), { target: { value: "secret" } })
+    await fireEvent.click(screen.getByRole("button", { name: "Continue" }))
+    expect(await screen.findByText("Password set. Log in to continue.")).toBeTruthy()
+    await fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    expect(await screen.findByText("You're at the Helm now")).toBeTruthy()
+    expect(api.postConfig).toHaveBeenCalledTimes(1)
+    expect(api.login).toHaveBeenCalledTimes(2)
+  })
+
+  it("no login redirect once the hash is saved", async () => {
+    vi.mocked(api.login).mockRejectedValueOnce(new Error("slow"))
+    render(SetupPage)
+    await fireEvent.input(await screen.findByPlaceholderText("Password"), { target: { value: "secret" } })
+    await fireEvent.click(screen.getByRole("button", { name: "Continue" }))
+    await screen.findByText("Password set. Log in to continue.")
+    session.isAdmin = false
+    await new Promise((r) => setTimeout(r, 20))
+    expect(redirect).not.toHaveBeenCalled()
+  })
+
   async function step2(connections: unknown[] = []) {
     vi.mocked(api.getAdminConfig).mockImplementation(async () => config("$2a$hash") as never)
     vi.mocked(api.getPublicConfig).mockResolvedValue({ connections, auth: [] } as never)
@@ -155,6 +178,39 @@ describe("setup page", () => {
     await fireEvent.click(presetButton(3))
     expect(await screen.findByText(/Your build is missing some plugins/)).toBeTruthy()
     expect(api.postConfig).not.toHaveBeenCalled()
+  })
+
+  it("a second click while a preset is pending opens no duplicate", async () => {
+    await step2([{ type: "s3", label: "mine" }])
+    await fireEvent.click(presetButton(3))
+    await waitFor(() => expect(confirmState.current).not.toBeNull())
+    const first = confirmState.current
+    expect(presetButton(3).hasAttribute("disabled")).toBe(true)
+    await fireEvent.click(presetButton(3))
+    expect(confirmState.current).toBe(first)
+    settle(true)
+    await waitFor(() => expect(api.postConfig).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(presetButton(3).hasAttribute("disabled")).toBe(false))
+  })
+
+  it("a cancelled preset re-enables the buttons", async () => {
+    await step2([{ type: "s3", label: "mine" }])
+    await fireEvent.click(presetButton(3))
+    await waitFor(() => expect(confirmState.current).not.toBeNull())
+    settle(false)
+    await waitFor(() => expect(presetButton(3).hasAttribute("disabled")).toBe(false))
+  })
+
+  it("leaving twice quickly asks about telemetry once", async () => {
+    vi.mocked(api.getAdminConfig).mockImplementation(async () => config("$2a$hash", false) as never)
+    render(SetupPage)
+    await screen.findAllByRole("button", { name: "Apply preset" })
+    const back = screen.getByRole("button", { name: "Previous step" })
+    await fireEvent.click(back)
+    await fireEvent.click(back)
+    await fireEvent.click(await screen.findByLabelText("The data is never shared with a third party."))
+    expect(await screen.findByText("Welcome Aboard!")).toBeTruthy()
+    expect(api.postConfig).toHaveBeenCalledTimes(1)
   })
 
   it("asks about telemetry when leaving step 2 and saves acceptance", async () => {
