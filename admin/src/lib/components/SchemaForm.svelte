@@ -16,7 +16,7 @@
 
   function ensureSections() {
     for (const [key, node] of Object.entries(schema)) {
-      if (!isLeaf(node) && (typeof values[key] !== "object" || values[key] === null)) values[key] = {}
+      if (!hidden.includes(key) && !isLeaf(node) && (typeof values[key] !== "object" || values[key] === null)) values[key] = {}
     }
   }
   ensureSections()

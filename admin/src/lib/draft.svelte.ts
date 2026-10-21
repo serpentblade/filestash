@@ -1,14 +1,19 @@
 import { addGuard } from "$lib/router"
 import { confirm } from "$lib/confirm.svelte"
 
+const isPlain = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v)
+
+// a missing key and an empty object are equal: section scaffolding is never an edit
 function equal(a: unknown, b: unknown): boolean {
   if (a === b) return true
+  if (a === undefined && isPlain(b)) return Object.keys(b).length === 0
+  if (b === undefined && isPlain(a)) return Object.keys(a).length === 0
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false
   if (Array.isArray(a) !== Array.isArray(b)) return false
-  const ka = Object.keys(a)
-  const kb = Object.keys(b)
-  if (ka.length !== kb.length) return false
-  return ka.every((k) => k in b && equal((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]))
+  const ra = a as Record<string, unknown>
+  const rb = b as Record<string, unknown>
+  return [...new Set([...Object.keys(ra), ...Object.keys(rb)])].every((k) => equal(ra[k], rb[k]))
 }
 
 export function createDraft<T>(initial: T) {

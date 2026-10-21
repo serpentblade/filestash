@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/svelte"
+import DraftHarness from "./SchemaForm.draft-harness.svelte"
 import Harness from "./SchemaForm.harness.svelte"
 import type { Schema } from "$lib/types"
 
@@ -58,5 +59,17 @@ describe("SchemaForm", () => {
     render(Harness, { schema: nested, values: { sec: { name: "x" } } })
     await fireEvent.input(screen.getByLabelText("Name"), { target: { value: "typed" } })
     expect(screen.getByTestId("out").textContent).toBe(JSON.stringify({ sec: { name: "typed" } }))
+  })
+
+  it("rendering does not dirty a draft; typing does", async () => {
+    render(DraftHarness, { schema: nested })
+    expect(screen.getByTestId("dirty").textContent).toBe("false")
+    await fireEvent.input(screen.getByLabelText("Name"), { target: { value: "typed" } })
+    expect(screen.getByTestId("dirty").textContent).toBe("true")
+  })
+
+  it("does not create objects for hidden sections", () => {
+    render(Harness, { schema: { ...nested, other: { n: el("text", "N", { value: "" }) } }, values: {}, hidden: ["other"] })
+    expect(screen.getByTestId("out").textContent).toBe(JSON.stringify({ sec: {} }))
   })
 })
