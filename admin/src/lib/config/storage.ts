@@ -27,6 +27,7 @@ export type StorageState = {
   method: string | null
   methodParams: Record<string, string>
   leftovers: Leftovers
+  loadedLabels: string[] // connection labels as loaded; leftovers matching any of them are never carried
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -95,7 +96,7 @@ export function loadStorage(connections: Connection[], mw: Middleware): StorageS
   leftovers.paramKeys = Object.keys(params).filter((k) => method === null || !labels.has(k))
   for (const k of leftovers.paramKeys) leftovers.paramValues[k] = structuredClone(params[k])
 
-  return { entries, method, methodParams, leftovers }
+  return { entries, method, methodParams, leftovers, loadedLabels: [...labels] }
 }
 
 export function saveStorage(
@@ -106,7 +107,7 @@ export function saveStorage(
   const connections = state.entries.map((e): Connection => ({
     ...(e.original ? structuredClone(e.original) : {}),
     type: e.type,
-    label: e.label,
+    label: e.label.trim(),
   }))
 
   const related: string[] = []
@@ -114,13 +115,15 @@ export function saveStorage(
   if (method !== null) {
     for (const e of state.entries) {
       if (e.mode !== "signin") continue
-      related.push(e.label)
-      params[e.label] = { type: e.type, ...e.details }
+      const label = e.label.trim()
+      related.push(label)
+      params[label] = { type: e.type, ...e.details }
     }
     if (!opts.removeLeftovers) {
-      // A leftover named like a current storage is never carried: that
-      // storage's own mode decides whether its label and params are saved.
-      const taken = new Set(state.entries.map((e) => e.label))
+      // A leftover named like a current storage, or like any storage as it was
+      // loaded (since renamed or deleted), is never carried: it would rebind
+      // credentials the admin sees as gone.
+      const taken = new Set([...state.entries.map((e) => e.label.trim()), ...state.loadedLabels])
       for (const l of state.leftovers.relatedLabels) {
         if (!taken.has(l)) related.push(l)
       }
@@ -151,14 +154,15 @@ export function duplicateLabels(entries: StorageEntry[]): Set<string> {
   const seen = new Set<string>()
   const dups = new Set<string>()
   for (const e of entries) {
-    if (seen.has(e.label)) dups.add(e.label)
-    seen.add(e.label)
+    const l = e.label.trim()
+    if (seen.has(l)) dups.add(l)
+    seen.add(l)
   }
   return dups
 }
 
 export function nextLabel(type: string, entries: StorageEntry[]): string {
-  const taken = new Set(entries.map((e) => e.label))
+  const taken = new Set(entries.map((e) => e.label.trim()))
   if (!taken.has(type)) return type
   let n = 2
   while (taken.has(`${type} ${n}`)) n += 1

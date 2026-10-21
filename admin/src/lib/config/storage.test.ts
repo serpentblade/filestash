@@ -229,6 +229,27 @@ describe("storage model", () => {
     expect(out2.middleware.attribute_mapping.params).toBe("{}")
   })
 
+  it("leftovers from a method-none load stay gone after rename or delete", () => {
+    const load = () =>
+      loadStorage([{ type: "s3", label: "s3" }], mw("", "s3", { s3: { type: "s3", secret: "creds" } }))
+    const check = (st: StorageState) => {
+      const out = saveStorage(setMethod(st, "htpasswd", {}))
+      expect(splitRelated(out.middleware.attribute_mapping.related_backend)).not.toContain("s3")
+      expect(JSON.parse(out.middleware.attribute_mapping.params)).not.toHaveProperty("s3")
+    }
+    check(update(load(), 0, { label: "Company" }))
+    const st = load()
+    check({ ...st, entries: [] })
+  })
+
+  it("labels are saved trimmed", () => {
+    const st = loadStorage([], mw("htpasswd", ""))
+    const out = saveStorage({ ...st, entries: [entry(" ok ", { mode: "signin", details: { a: "1" } })] })
+    expect(out.connections[0].label).toBe("ok")
+    expect(out.middleware.attribute_mapping.related_backend).toBe("ok")
+    expect(JSON.parse(out.middleware.attribute_mapping.params)).toEqual({ ok: { type: "s3", a: "1" } })
+  })
+
   it("new entries save as plain connections", () => {
     const st = loadStorage([], mw("htpasswd", ""))
     const out = saveStorage({ ...st, entries: [entry("mine", { type: "ftp", mode: "signin", details: { hostname: "h" } })] })
@@ -247,11 +268,13 @@ describe("storage model", () => {
   it("duplicateLabels finds repeated labels", () => {
     expect(duplicateLabels([entry("s3"), entry("s3"), entry("ftp")])).toEqual(new Set(["s3"]))
     expect(duplicateLabels([entry("s3"), entry("ftp")])).toEqual(new Set())
+    expect(duplicateLabels([entry("s3"), entry(" s3 ")])).toEqual(new Set(["s3"]))
   })
 
   it("nextLabel de-duplicates", () => {
     expect(nextLabel("s3", [entry("s3"), entry("s3 2")])).toBe("s3 3")
     expect(nextLabel("ftp", [entry("s3")])).toBe("ftp")
+    expect(nextLabel("s3", [entry(" s3 ")])).toBe("s3 2")
   })
 
   it("newKey hands out distinct new- keys", () => {
