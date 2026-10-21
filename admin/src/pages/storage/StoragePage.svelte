@@ -149,8 +149,12 @@
       })
       if (!ok) return false
     }
-    draft.value.storage = setMethod($state.snapshot(draft.value.storage) as StorageState, method, params)
-    return save()
+    // the draft only keeps the new method if the save goes through
+    const before = $state.snapshot(draft.value.storage) as StorageState
+    draft.value.storage = setMethod(before, method, params)
+    const ok = await save()
+    if (!ok) draft.value.storage = before
+    return ok
   }
 
   function discard() {

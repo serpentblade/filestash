@@ -6,7 +6,6 @@
   import { Button } from "$lib/components/ui/button"
   import SchemaForm from "$lib/components/SchemaForm.svelte"
   import { confirm } from "$lib/confirm.svelte"
-  import { cn } from "$lib/utils"
   import { methodChangeWarning, methodVariables } from "./method"
 
   let { open = $bindable(false), state: storage, middlewares, blocked = "", onApply }: {
@@ -23,8 +22,13 @@
 
   // None, then every method the server offers. "admin" protects the admin login itself,
   // so it is only listed while the config uses it.
+  const loaded = $derived(Object.keys(middlewares).length > 0)
+  // the current method stays listed even when the server's list could not be loaded
   const methods = $derived([
-    ...Object.keys(middlewares).filter((m) => m !== "admin" || m === storage.method),
+    ...new Set([
+      ...Object.keys(middlewares).filter((m) => m !== "admin" || m === storage.method),
+      ...(storage.method === null ? [] : [storage.method]),
+    ]),
   ])
 
   // a method's starting values: what the spec ships with
@@ -107,7 +111,7 @@
 </script>
 
 <Dialog.Root bind:open={() => open, (v) => (v ? (open = true) : void requestClose())}>
-  <Dialog.Content class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+  <Dialog.Content class="max-h-[90vh] overflow-x-hidden overflow-y-auto sm:max-w-2xl">
     <Dialog.Header>
       <Dialog.Title>Login method</Dialog.Title>
       <Dialog.Description>How people prove who they are before a storage opens for them.</Dialog.Description>
@@ -116,14 +120,16 @@
     <div class="flex flex-wrap gap-2" role="group" aria-label="Login method">
       {#each [null, ...methods] as m (m ?? "")}
         <Button
-          variant="outline"
+          variant={method === m ? "default" : "outline"}
           aria-pressed={method === m}
-          class={cn(method === m && "border-primary bg-muted")}
           onclick={() => pick(m)}
         >{m ?? "None"}</Button>
       {/each}
     </div>
 
+    {#if !loaded}
+      <p class="text-muted-foreground text-sm">Couldn't load the available login methods.</p>
+    {/if}
     {#if method === null}
       <p class="text-muted-foreground text-sm">
         No login method. Each storage asks people for their own connection details.
