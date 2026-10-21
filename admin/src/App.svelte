@@ -10,9 +10,8 @@
   import LoginForm from "$lib/shell/LoginForm.svelte"
   import LoginDialog from "$lib/shell/LoginDialog.svelte"
   import StoragePage from "./pages/storage/StoragePage.svelte"
-  import WorkflowListPage from "./pages/workflow/WorkflowListPage.svelte"
-  import WorkflowEditPage from "./pages/workflow/WorkflowEditPage.svelte"
-  import WorkflowNewPage from "./pages/workflow/WorkflowNewPage.svelte"
+  import WorkflowList from "./pages/workflow/WorkflowList.svelte"
+  import WorkflowEditor from "./pages/workflow/WorkflowEditor.svelte"
   import ActivityPage from "./pages/activity/ActivityPage.svelte"
   import SettingsPage from "./pages/settings/SettingsPage.svelte"
   import AboutPage from "./pages/about/AboutPage.svelte"
@@ -63,11 +62,11 @@
     {#if $route?.name === "storage"}
       <StoragePage />
     {:else if $route?.name === "workflow-list"}
-      <WorkflowListPage />
-    {:else if $route?.name === "workflow-edit"}
-      <WorkflowEditPage />
-    {:else if $route?.name === "workflow-new"}
-      <WorkflowNewPage />
+      <WorkflowList />
+    {:else if $route?.name === "workflow-edit" || $route?.name === "workflow-new"}
+      {#key `${$route.name}:${$route.params.id ?? ""}`}
+        <WorkflowEditor />
+      {/key}
     {:else if $route?.name === "activity"}
       <ActivityPage />
     {:else if $route?.name === "settings"}
