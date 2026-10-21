@@ -4,6 +4,7 @@
   import { Toaster } from "$lib/components/ui/sonner"
   import ConfirmDialog from "$lib/components/ConfirmDialog.svelte"
   import { route, href, safeNext } from "$lib/router"
+  import { redirect } from "$lib/redirect"
   import { session } from "$lib/session.svelte"
   import Layout from "$lib/shell/Layout.svelte"
   import LoginForm from "$lib/shell/LoginForm.svelte"
@@ -17,7 +18,27 @@
   import AboutPage from "./pages/about/AboutPage.svelte"
   import SetupPage from "./pages/setup/SetupPage.svelte"
 
-  onMount(() => session.start())
+  import { getSession } from "$lib/api/endpoints"
+  import { Button } from "$lib/components/ui/button"
+  import Loader2Icon from "@lucide/svelte/icons/loader-2"
+
+  let failed = $state(false)
+
+  // The first check is awaited here so a failure can be shown; later polls swallow errors in session.
+  async function check() {
+    failed = false
+    try {
+      const ok = await getSession()
+      if (session.isAdmin === null) session.isAdmin = ok
+    } catch {
+      failed = session.isAdmin === null
+    }
+  }
+
+  onMount(() => {
+    void check()
+    return session.start()
+  })
 
   // Once the shell has been shown it stays mounted; an expired session only opens the dialog.
   let wasAdmin = $state(false)
@@ -28,7 +49,7 @@
 
   $effect(() => {
     if ($route?.name === "home") {
-      location.href = safeNext($route.query.get("next"), location.origin) ?? href("admin/storage")
+      redirect(safeNext($route.query.get("next"), location.origin) ?? href("admin/storage"))
     }
   })
 </script>
@@ -59,6 +80,17 @@
     {/if}
   </Layout>
   <LoginDialog />
+{:else if session.isAdmin === null}
+  <div class="flex min-h-screen items-center justify-center p-6">
+    {#if failed}
+      <div class="flex flex-col items-center gap-3">
+        <p>Can't reach the server</p>
+        <Button onclick={check}>Retry</Button>
+      </div>
+    {:else}
+      <div role="status" aria-label="Loading"><Loader2Icon class="size-6 animate-spin" /></div>
+    {/if}
+  </div>
 {:else if session.isAdmin === false}
   <div class="flex min-h-screen items-center justify-center p-6">
     <div class="w-full max-w-sm">
