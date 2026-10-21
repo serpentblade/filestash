@@ -42,6 +42,34 @@ describe("schema helpers", () => {
     expect(coerce(numEl, null)).toBeNull()
   })
 
+  it("coerce number maps whitespace and non-numeric to null", () => {
+    const numEl = leaf("n", "number", null)
+    expect(coerce(numEl, " ")).toBeNull()
+    expect(coerce(numEl, "abc")).toBeNull()
+    expect(coerce(numEl, " 2 ")).toBe(2)
+  })
+
+  it("withValues and toValues do not alias arrays", () => {
+    const el = { ...leaf("l", "select", ["a"], ["d"]), options: ["x", "y"] }
+    const s: Schema = { g: { l: el } }
+    const kept = withValues(s, {}).g as Schema
+    ;(kept.l as FormElement).options!.push("z")
+    ;((kept.l as FormElement).value as string[]).push("z")
+    ;((kept.l as FormElement).default as string[]).push("z")
+    expect(el.options).toEqual(["x", "y"])
+    expect(el.value).toEqual(["a"])
+    expect(el.default).toEqual(["d"])
+
+    const supplied = { g: { l: ["q"] } }
+    const set = withValues(s, supplied).g as Schema
+    ;((set.l as FormElement).value as string[]).push("z")
+    expect(supplied.g.l).toEqual(["q"])
+
+    const out = toValues(s) as { g: { l: string[] } }
+    out.g.l.push("z")
+    expect(el.value).toEqual(["a"])
+  })
+
   it("coerce handles boolean and text", () => {
     expect(coerce(leaf("b", "boolean", false), true)).toBe(true)
     expect(coerce(leaf("t", "text", null), "")).toBeNull()
