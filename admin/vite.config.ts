@@ -12,7 +12,7 @@ export default defineConfig({
       $lib: fileURLToPath(new URL('./src/lib', import.meta.url)),
     },
     // Resolve svelte's browser build under vitest so mount() works in jsdom.
-    conditions: process.env.VITEST ? ['browser'] : [],
+    ...(process.env.VITEST ? { conditions: ['browser'] } : {}),
   },
   build: {
     outDir: '../public/assets/admin',

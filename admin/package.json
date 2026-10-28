@@ -8,6 +8,7 @@
     "build": "vite build && rm -f ../public/assets/admin/index.html",
     "preview": "vite preview",
     "test": "vitest run",
+    "verify": "npm run build && vitest run src/build-output.test.ts",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {

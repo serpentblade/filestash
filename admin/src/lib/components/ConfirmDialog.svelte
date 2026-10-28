@@ -6,7 +6,8 @@
 </script>
 
 <AlertDialog.Root open={cur !== null} onOpenChange={(o) => { if (!o) settle(false) }}>
-  <AlertDialog.Content>
+  <!-- above every other dialog: a confirm can open over the create-storage dialog -->
+  <AlertDialog.Content class="z-[61]" overlayClass="z-[60]">
     <AlertDialog.Header>
       <AlertDialog.Title>{cur?.title}</AlertDialog.Title>
       <AlertDialog.Description>{cur?.body}</AlertDialog.Description>
