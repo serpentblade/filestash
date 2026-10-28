@@ -72,4 +72,11 @@ describe("SchemaForm", () => {
     render(Harness, { schema: { ...nested, other: { n: el("text", "N", { value: "" }) } }, values: {}, hidden: ["other"] })
     expect(screen.getByTestId("out").textContent).toBe(JSON.stringify({ sec: {} }))
   })
+
+  it("long_text never grows past its container", () => {
+    const long = "x".repeat(300)
+    render(Harness, { schema: { users: el("long_text", "Users", { placeholder: long }) }, values: {} })
+    const cls = screen.getByLabelText("Users").className
+    for (const c of ["w-full", "min-w-0", "max-w-full", "field-sizing-fixed", "whitespace-pre-wrap"]) expect(cls).toContain(c)
+  })
 })

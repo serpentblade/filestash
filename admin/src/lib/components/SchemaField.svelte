@@ -41,7 +41,7 @@
     {:else}
       <Label for={name}>{el.label}</Label>
       {#if el.type === "long_text" || el.type === "json"}
-        <Textarea id={name} {name} placeholder={el.placeholder} disabled={el.readonly} value={text}
+        <Textarea id={name} {name} class="field-sizing-fixed min-h-24 w-full max-w-full min-w-0 break-all whitespace-pre-wrap" placeholder={el.placeholder} disabled={el.readonly} value={text}
           oninput={(e) => (value = coerce(el, e.currentTarget.value))} />
       {:else if el.type === "password" || el.type === "long_password"}
         <div class="flex gap-2">

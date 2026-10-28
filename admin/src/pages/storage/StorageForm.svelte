@@ -14,14 +14,16 @@
     method,
     otherLabels,
     onOpenLoginMethod,
+    variables: tokens = ["{{ .user }}", "{{ .password }}"],
     savedSignin = false,
   }: {
     entry: StorageEntry
     backends: Record<string, Schema>
     method: string | null
     otherLabels: string[]
-    // Task 10 wires the login-method popup; until then the link renders disabled
     onOpenLoginMethod?: () => void
+    // {{ .name }} tokens the login method provides to the connection details
+    variables?: string[]
     // the entry is saved in sign-in mode, so switching it to own drops stored details on save
     savedSignin?: boolean
   } = $props()
@@ -29,8 +31,7 @@
   const id = $derived(entry.key)
   const labelError = $derived(validateLabel(entry.label, otherLabels))
   const schema = $derived(backends[entry.type])
-  // TODO(Task 10): methodVariables(method)
-  const variables = "{{ .user }} {{ .password }}"
+  const variables = $derived(tokens.join(" "))
 </script>
 
 <div class="space-y-6">

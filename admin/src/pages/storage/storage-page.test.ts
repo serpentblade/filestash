@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 
 vi.mock("$lib/api/endpoints", () => ({
   getBackends: vi.fn(),
+  getAuthMiddlewares: vi.fn(async () => ({})),
   getAdminConfig: vi.fn(),
   getPublicConfig: vi.fn(),
   postConfig: vi.fn(),
