@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onDestroy } from "svelte"
+  import { addGuard } from "$lib/router"
   import type { StorageEntry } from "$lib/config/storage"
   import { newKey, nextLabel, validateLabel } from "$lib/config/storage"
   import type { Schema } from "$lib/types"
@@ -8,7 +10,7 @@
   import { cn } from "$lib/utils"
   import StorageForm from "./StorageForm.svelte"
 
-  let { open = $bindable(false), backends, method, entries, blocked = "", saving = false, onCreate, onOpenLoginMethod, variables }: {
+  let { open = $bindable(false), backends, method, entries, blocked = "", saving = false, onCreate, variables }: {
     open?: boolean
     backends: Record<string, Schema>
     method: string | null
@@ -19,7 +21,6 @@
     saving?: boolean
     // resolves false to keep the dialog open
     onCreate: (entry: StorageEntry) => Promise<boolean>
-    onOpenLoginMethod?: () => void
     variables?: string[]
   } = $props()
 
@@ -73,6 +74,19 @@
     close()
   }
 
+  // the "Set up a login method first" link leaves the page; ask before losing what was typed
+  const disposeGuard = addGuard({
+    isDirty: () => open && touched,
+    confirm: () =>
+      confirm({
+        title: "Discard this storage?",
+        body: "What you entered for the new storage will be lost.",
+        confirmLabel: "Discard",
+        destructive: true,
+      }),
+  })
+  onDestroy(disposeGuard)
+
   let busy = $state(false)
   async function create() {
     if (entry === null || invalid || blocked || saving) return
@@ -110,7 +124,6 @@
         {backends}
         {method}
         {otherLabels}
-        {onOpenLoginMethod}
         {variables}
       />
     {/if}

@@ -10,8 +10,8 @@ describe("parseRoute", () => {
   })
 
   it("parses the fixed pages", () => {
-    const names = ["workflow", "activity", "settings", "about", "setup"]
-    const want = ["workflow-list", "activity", "settings", "about", "setup"]
+    const names = ["authentication", "workflow", "activity", "settings", "about", "setup"]
+    const want = ["authentication", "workflow-list", "activity", "settings", "about", "setup"]
     names.forEach((n, i) => expect(parseRoute(`/admin/${n}`, "", "http://h/")?.name).toBe(want[i]))
     expect(parseRoute("/admin", "", "http://h/")?.name).toBe("home")
     expect(parseRoute("/admin/", "", "http://h/")?.name).toBe("home")

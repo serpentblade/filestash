@@ -10,14 +10,13 @@
     loadStorage,
     mergeIdentity,
     saveStorage,
-    setMethod,
     validateLabel,
-    type IdentityEdit,
     type IdentityProvider,
     type Middleware,
     type StorageEntry,
     type StorageState,
   } from "$lib/config/storage"
+  import { href } from "$lib/router"
   import { createDraft } from "$lib/draft.svelte"
   import { confirm } from "$lib/confirm.svelte"
   import type { Schema } from "$lib/types"
@@ -28,7 +27,6 @@
   import StorageForm from "./StorageForm.svelte"
   import CreateStorageDialog from "./CreateStorageDialog.svelte"
   import LeftoversNotice from "./LeftoversNotice.svelte"
-  import LoginMethodDialog from "./LoginMethodDialog.svelte"
   import { methodVariables } from "./method"
 
   type Draft = { storage: StorageState; removeLeftovers: boolean }
@@ -45,7 +43,6 @@
   let status = $state<"loading" | "failed" | "ready">("loading")
   let selected = $state(0)
   let creating = $state(false)
-  let methodOpen = $state(false)
   let middlewares = $state<Record<string, Schema>>({})
   let saving = $state(false)
   // keys of entries the server has in sign-in mode, to warn before their details are dropped
@@ -53,7 +50,6 @@
 
   const storage = $derived(draft.value.storage)
   const entries = $derived(storage.entries)
-  const onOpenLoginMethod = () => (methodOpen = true)
   const variables = $derived(methodVariables(storage.method === null ? undefined : middlewares[storage.method]))
   const dups = $derived(duplicateLabels(entries))
   const current = $derived(entries[selected] as StorageEntry | undefined)
@@ -114,9 +110,9 @@
     })),
   })
 
-  // identity is set only by the login method dialog; other saves keep the server's
-  // identity provider as it is now, since plugins rewrite its params at runtime
-  async function save(identity: IdentityEdit | null = null): Promise<boolean> {
+  // the identity provider is only edited on the Authentication page; storage saves keep
+  // the server's as it is now, since plugins rewrite its params at runtime
+  async function save(): Promise<boolean> {
     if (blocked) return false
     saving = true
     const ok = await draft.save(async (v) => {
@@ -126,7 +122,7 @@
           const fresh = (values.middleware as Partial<Middleware> | undefined) ?? {}
           const identity_provider = mergeIdentity(
             (fresh.identity_provider as IdentityProvider | undefined) ?? out.middleware.identity_provider,
-            identity,
+            null,
           )
           const middleware = { ...fresh, ...out.middleware, identity_provider }
           return { values: { ...values, middleware }, connections: out.connections }
@@ -146,29 +142,6 @@
     })
     saving = false
     if (ok) clamp()
-    return ok
-  }
-
-  // false keeps the login method dialog open
-  async function applyMethod(
-    method: string | null,
-    params: Record<string, string>,
-    edited: Record<string, string | null> | null,
-  ): Promise<boolean> {
-    if (blocked) return false
-    if (draft.dirty) {
-      const ok = await confirm({
-        title: "Save other changes too?",
-        body: `Changing the login method saves the page. ${ALSO_SAVES}`,
-        confirmLabel: "Save all",
-      })
-      if (!ok) return false
-    }
-    // the draft only keeps the new method if the save goes through
-    const before = $state.snapshot(draft.value.storage) as StorageState
-    draft.value.storage = setMethod(before, method, params)
-    const ok = await save({ method, params, edited })
-    if (!ok) draft.value.storage = before
     return ok
   }
 
@@ -251,9 +224,7 @@
         </Button>
         <p class="text-muted-foreground text-sm">
           Login method: {storage.method ?? "None"} ·
-          <Button variant="link" size="xs" class="h-auto p-0" onclick={onOpenLoginMethod}>
-            configure
-          </Button>
+          <a class="underline" data-link href={href("admin/authentication")}>change</a>
         </p>
       </div>
 
@@ -266,7 +237,6 @@
                 {backends}
                 method={storage.method}
                 otherLabels={othersOf(selected)}
-                {onOpenLoginMethod}
                 {variables}
                 savedSignin={savedSignin.has(current.key)}
               />
@@ -299,8 +269,5 @@
   {blocked}
   {saving}
   onCreate={create}
-  {onOpenLoginMethod}
   {variables}
 />
-
-<LoginMethodDialog bind:open={methodOpen} state={storage} {middlewares} {blocked} onApply={applyMethod} />

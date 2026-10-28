@@ -4,6 +4,7 @@
   import { getRelease } from "$lib/api/endpoints"
 
   const items = [
+    { label: "Authentication", path: "admin/authentication", names: ["authentication"] },
     { label: "Storage", path: "admin/storage", names: ["storage"] },
     { label: "Workflow", path: "admin/workflow", names: ["workflow-list", "workflow-edit", "workflow-new"] },
     { label: "Activity", path: "admin/activity", names: ["activity"] },

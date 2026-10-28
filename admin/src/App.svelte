@@ -9,6 +9,7 @@
   import Layout from "$lib/shell/Layout.svelte"
   import LoginForm from "$lib/shell/LoginForm.svelte"
   import LoginDialog from "$lib/shell/LoginDialog.svelte"
+  import AuthenticationPage from "./pages/authentication/AuthenticationPage.svelte"
   import StoragePage from "./pages/storage/StoragePage.svelte"
   import WorkflowList from "./pages/workflow/WorkflowList.svelte"
   import WorkflowEditor from "./pages/workflow/WorkflowEditor.svelte"
@@ -59,7 +60,9 @@
   <!-- redirecting -->
 {:else if authed}
   <Layout>
-    {#if $route?.name === "storage"}
+    {#if $route?.name === "authentication"}
+      <AuthenticationPage />
+    {:else if $route?.name === "storage"}
       <StoragePage />
     {:else if $route?.name === "workflow-list"}
       <WorkflowList />
