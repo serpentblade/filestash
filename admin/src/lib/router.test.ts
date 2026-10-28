@@ -18,6 +18,13 @@ describe("parseRoute", () => {
     expect(parseRoute("/admin/workflow/new", "", "http://h/")?.name).toBe("workflow-new")
   })
 
+  it("parses a settings section", () => {
+    const r = parseRoute("/admin/settings/share", "", "http://h/")
+    expect(r?.name).toBe("settings")
+    expect(r?.params.section).toBe("share")
+    expect(parseRoute("/admin/settings/a/b", "", "http://h/")).toBeNull()
+  })
+
   it("parses workflow id", () => {
     const r = parseRoute("/admin/workflow/abc", "", "http://h/")
     expect(r?.name).toBe("workflow-edit")
@@ -98,6 +105,15 @@ describe("navigate", () => {
     expect(await navigate("admin/settings")).toBe(false)
     expect(confirm).toHaveBeenCalled()
     expect(location.pathname).toBe("/admin/about")
+  })
+
+  it("skips a dirty guard whose page stays on screen", async () => {
+    const confirm = vi.fn().mockResolvedValue(false)
+    off = addGuard({ isDirty: () => true, confirm, stays: (to) => to?.name === "settings" })
+    expect(await navigate("admin/settings")).toBe(true)
+    expect(confirm).not.toHaveBeenCalled()
+    expect(await navigate("admin/about")).toBe(false)
+    expect(confirm).toHaveBeenCalled()
   })
 
   it("proceeds when the guard is clean", async () => {

@@ -1,4 +1,4 @@
-import { addGuard } from "$lib/router"
+import { addGuard, type Route } from "$lib/router"
 import { t } from "$lib/i18n"
 import { confirm } from "$lib/confirm.svelte"
 
@@ -6,7 +6,7 @@ const isPlain = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v)
 
 // a missing key and an empty object are equal: section scaffolding is never an edit
-function equal(a: unknown, b: unknown): boolean {
+export function equal(a: unknown, b: unknown): boolean {
   if (a === b) return true
   if (a === undefined && isPlain(b)) return Object.keys(b).length === 0
   if (b === undefined && isPlain(a)) return Object.keys(a).length === 0
@@ -17,7 +17,7 @@ function equal(a: unknown, b: unknown): boolean {
   return [...new Set([...Object.keys(ra), ...Object.keys(rb)])].every((k) => equal(ra[k], rb[k]))
 }
 
-export function createDraft<T>(initial: T) {
+export function createDraft<T>(initial: T, opts: { stays?: (to: Route | null) => boolean } = {}) {
   let baseline = $state.snapshot(initial) as T
   let value = $state($state.snapshot(initial) as T)
 
@@ -25,6 +25,7 @@ export function createDraft<T>(initial: T) {
 
   const dispose = addGuard({
     isDirty: dirty,
+    stays: opts.stays,
     confirm: () =>
       confirm({
         title: t("Discard unsaved changes?"),
@@ -48,6 +49,10 @@ export function createDraft<T>(initial: T) {
     },
     get dirty() {
       return dirty()
+    },
+    // the last loaded or saved value
+    get baseline() {
+      return baseline
     },
     reset,
     async save(fn: (v: T) => Promise<T | void>): Promise<boolean> {
