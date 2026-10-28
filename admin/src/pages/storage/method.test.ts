@@ -57,4 +57,13 @@ describe("methodChangeWarning", () => {
     expect(methodChangeWarning(state("htpasswd", ""), "ldap")).toBeNull()
     expect(methodChangeWarning(state("htpasswd", ""), null)).toBeNull()
   })
+
+  it("switching away from local says the user list will be cleared", () => {
+    const cleared = "The local user list will be cleared."
+    expect(methodChangeWarning(state("local", "s3"), "ldap")).toBe(`s3 will now sign in with ldap. ${cleared}`)
+    expect(methodChangeWarning(state("local", "s3"), null)).toMatch(new RegExp(`removed\\. ${cleared}$`))
+    expect(methodChangeWarning(state("local", ""), "htpasswd")).toBe(cleared)
+    expect(methodChangeWarning(state("local", ""), "local")).toBeNull()
+    expect(methodChangeWarning(state("htpasswd", "s3"), "local")).not.toContain(cleared)
+  })
 })

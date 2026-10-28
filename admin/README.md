@@ -19,3 +19,7 @@ Run all of these from `admin/`.
 ## Browser cache
 
 The admin HTML's ETag does not change between dev builds, so the browser may keep serving a stale page. Disable the cache in dev tools or add a query string (for example `?v=2`) when reloading.
+
+## Compressed files
+
+Go's static file server prefers a `.br` or `.gz` sibling when one exists. If you run `public/Makefile compress`, re-run it after every admin rebuild (or delete the compressed files under `public/assets/admin/`), or stale bundles will be served.

@@ -3,8 +3,10 @@
   import { Button } from "$lib/components/ui/button"
   import { confirm } from "$lib/confirm.svelte"
 
-  let { leftovers, removing, onRemove }: {
+  let { leftovers, method, removing, onRemove }: {
     leftovers: Leftovers
+    // with no login method, any save drops them
+    method: string | null
     removing: boolean
     onRemove: () => void
   } = $props()
@@ -38,7 +40,9 @@
         {/each}
       </ul>
     </details>
-    {#if removing}
+    {#if method === null}
+      <p>These will be removed when you save, because no login method is set.</p>
+    {:else if removing}
       <p>They will be removed when you save.</p>
     {:else}
       <Button variant="outline" size="sm" onclick={remove}>Remove leftovers</Button>

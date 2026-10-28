@@ -28,13 +28,17 @@ export function methodVariables(spec: Schema | undefined): string[] {
   return found.length > 0 ? found : [...FALLBACK]
 }
 
+const LOCAL_CLEARED = "The local user list will be cleared."
+
 export function methodChangeWarning(state: StorageState, next: string | null): string | null {
   if (next === state.method) return null
+  const local = state.method === "local" ? LOCAL_CLEARED : null
   const using = usesSignIn(state)
-  if (using.length === 0) return null
+  if (using.length === 0) return local
   const labels = using.map((e) => e.label.trim()).join(", ")
-  if (next === null) {
-    return `${labels} will switch to users entering their own login, and their stored connection details will be removed.`
-  }
-  return `${labels} will now sign in with ${next}.`
+  const base =
+    next === null
+      ? `${labels} will switch to users entering their own login, and their stored connection details will be removed.`
+      : `${labels} will now sign in with ${next}.`
+  return local ? `${base} ${local}` : base
 }

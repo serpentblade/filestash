@@ -8,13 +8,15 @@
   import { cn } from "$lib/utils"
   import StorageForm from "./StorageForm.svelte"
 
-  let { open = $bindable(false), backends, method, entries, blocked = "", onCreate, onOpenLoginMethod, variables }: {
+  let { open = $bindable(false), backends, method, entries, blocked = "", saving = false, onCreate, onOpenLoginMethod, variables }: {
     open?: boolean
     backends: Record<string, Schema>
     method: string | null
     entries: StorageEntry[]
     // why the page can't save right now; Create saves, so it is disabled meanwhile
     blocked?: string
+    // a page save is in flight
+    saving?: boolean
     // resolves false to keep the dialog open
     onCreate: (entry: StorageEntry) => Promise<boolean>
     onOpenLoginMethod?: () => void
@@ -23,6 +25,8 @@
 
   let entry = $state<StorageEntry | null>(null)
   let defaultLabel = $state("")
+  // what was typed for each type, so switching type and back restores it
+  let detailsByType: Record<string, Record<string, string>> = {}
 
   const types = $derived(Object.keys(backends).sort())
   const otherLabels = $derived(entries.map((e) => e.label))
@@ -38,13 +42,14 @@
     const keepLabel = entry !== null && entry.label !== defaultLabel
     const label = nextLabel(type, entries)
     defaultLabel = label
+    if (entry !== null) detailsByType[entry.type] = { ...$state.snapshot(entry.details) }
     entry = {
       key: entry?.key ?? newKey(),
       original: null,
       type,
       label: keepLabel && entry ? entry.label : label,
       mode: entry?.mode ?? "own",
-      details: {},
+      details: { ...(detailsByType[type] ?? {}) },
     }
   }
 
@@ -52,6 +57,7 @@
     open = false
     entry = null
     defaultLabel = ""
+    detailsByType = {}
   }
 
   async function requestClose() {
@@ -69,7 +75,7 @@
 
   let busy = $state(false)
   async function create() {
-    if (entry === null || invalid || blocked) return
+    if (entry === null || invalid || blocked || saving) return
     const created = { ...$state.snapshot(entry), label: entry.label.trim() } as StorageEntry
     busy = true
     try {
@@ -114,7 +120,7 @@
     {/if}
     <Dialog.Footer>
       <Button variant="outline" onclick={requestClose}>Cancel</Button>
-      <Button onclick={create} disabled={invalid || busy || blocked !== ""}
+      <Button onclick={create} disabled={invalid || busy || saving || blocked !== ""}
         aria-describedby={blocked ? "create-blocked" : undefined}>Create</Button>
     </Dialog.Footer>
   </Dialog.Content>

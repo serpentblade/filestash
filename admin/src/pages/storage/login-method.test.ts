@@ -69,7 +69,10 @@ const posted = () => vi.mocked(api.postConfig).mock.calls[0][0] as Record<string
 
 async function openDialog() {
   await fireEvent.click(await screen.findByRole("button", { name: "configure" }))
-  return screen.findByRole("dialog", { name: "Login method" })
+  const dialog = await screen.findByRole("dialog", { name: "Login method" })
+  // the dialog reads the current method's params from the server first
+  await waitFor(() => expect(within(dialog).queryByText("Loading…")).toBeNull())
+  return dialog
 }
 
 describe("login method dialog", () => {
@@ -201,5 +204,36 @@ describe("login method dialog", () => {
     expect(within(dialog).getByText("Couldn't load the available login methods.")).toBeInTheDocument()
     expect(within(dialog).getByRole("button", { name: "htpasswd" })).toHaveAttribute("aria-pressed", "true")
     expect(within(dialog).queryByRole("textbox")).toBeNull()
+  })
+
+  it("seeds the current method from the server and saves only the edited keys onto fresh params", async () => {
+    const atLoad = JSON.stringify({ users: "alice:h0" })
+    const atOpen = JSON.stringify({ users: "alice:h1", mfa: "bob" })
+    const atSave = JSON.stringify({ users: "alice:h1", mfa: "bob,carol", added: "x" })
+    setup(both, "htpasswd", "s3", atLoad)
+    // the page has loaded atLoad by now; the server changes before the dialog opens and again before the save
+    vi.mocked(api.getAdminConfig)
+      .mockResolvedValueOnce(adminConfig("htpasswd", "s3", "{}", atOpen) as never)
+      .mockResolvedValue(adminConfig("htpasswd", "s3", "{}", atSave) as never)
+    const dialog = await openDialog()
+    const users = await within(dialog).findByLabelText(/users/i)
+    expect(users).toHaveValue("alice:h1")
+    await fireEvent.input(users, { target: { value: "alice:h2" } })
+    await fireEvent.click(within(dialog).getByRole("button", { name: "Save" }))
+    await waitFor(() => expect(api.postConfig).toHaveBeenCalledTimes(1))
+    const idp = posted().middleware.identity_provider
+    expect(idp.type).toBe("htpasswd")
+    expect(JSON.parse(idp.params)).toEqual({ users: "alice:h2", mfa: "bob,carol", added: "x" })
+  })
+
+  it("a method change writes the new type with the dialog's params, not the server's", async () => {
+    setup(both, "local", "s3", JSON.stringify({ users: [{ name: "bob" }] }))
+    const dialog = await openDialog()
+    await fireEvent.click(within(dialog).getByRole("button", { name: "ldap" }))
+    expect(within(dialog).getByText(/The local user list will be cleared\./)).toBeInTheDocument()
+    await fireEvent.input(within(dialog).getByLabelText(/hostname/i), { target: { value: "ldap.local" } })
+    await fireEvent.click(within(dialog).getByRole("button", { name: "Switch to ldap" }))
+    await waitFor(() => expect(api.postConfig).toHaveBeenCalledTimes(1))
+    expect(posted().middleware.identity_provider).toEqual({ type: "ldap", params: JSON.stringify({ hostname: "ldap.local" }) })
   })
 })

@@ -8,9 +8,12 @@
   import {
     duplicateLabels,
     loadStorage,
+    mergeIdentity,
     saveStorage,
     setMethod,
     validateLabel,
+    type IdentityEdit,
+    type IdentityProvider,
     type Middleware,
     type StorageEntry,
     type StorageState,
@@ -111,14 +114,22 @@
     })),
   })
 
-  async function save(): Promise<boolean> {
+  // identity is set only by the login method dialog; other saves keep the server's
+  // identity provider as it is now, since plugins rewrite its params at runtime
+  async function save(identity: IdentityEdit | null = null): Promise<boolean> {
     if (blocked) return false
     saving = true
     const ok = await draft.save(async (v) => {
       try {
         await saveConfig(({ values }) => {
           const out = saveStorage(withCleanDetails(v.storage), { removeLeftovers: v.removeLeftovers })
-          return { values: { ...values, middleware: out.middleware }, connections: out.connections }
+          const fresh = (values.middleware as Partial<Middleware> | undefined) ?? {}
+          const identity_provider = mergeIdentity(
+            (fresh.identity_provider as IdentityProvider | undefined) ?? out.middleware.identity_provider,
+            identity,
+          )
+          const middleware = { ...fresh, ...out.middleware, identity_provider }
+          return { values: { ...values, middleware }, connections: out.connections }
         })
       } catch (err) {
         toast.error(`Couldn't save: ${err instanceof Error ? err.message : String(err)}`)
@@ -139,7 +150,11 @@
   }
 
   // false keeps the login method dialog open
-  async function applyMethod(method: string | null, params: Record<string, string>): Promise<boolean> {
+  async function applyMethod(
+    method: string | null,
+    params: Record<string, string>,
+    edited: Record<string, string | null> | null,
+  ): Promise<boolean> {
     if (blocked) return false
     if (draft.dirty) {
       const ok = await confirm({
@@ -152,7 +167,7 @@
     // the draft only keeps the new method if the save goes through
     const before = $state.snapshot(draft.value.storage) as StorageState
     draft.value.storage = setMethod(before, method, params)
-    const ok = await save()
+    const ok = await save({ method, params, edited })
     if (!ok) draft.value.storage = before
     return ok
   }
@@ -213,6 +228,7 @@
       <div class="space-y-3">
         <LeftoversNotice
           leftovers={storage.leftovers}
+          method={storage.method}
           removing={draft.value.removeLeftovers}
           onRemove={() => (draft.value.removeLeftovers = true)}
         />
@@ -229,7 +245,8 @@
             </li>
           {/each}
         </ul>
-        <Button variant="outline" class="w-full" aria-label="Add storage" onclick={() => (creating = true)}>
+        <Button variant="outline" class="w-full" aria-label="Add storage" disabled={saving}
+          onclick={() => (creating = true)}>
           <PlusIcon />
         </Button>
         <p class="text-muted-foreground text-sm">
@@ -270,7 +287,7 @@
   {/if}
 
   <div class="mt-auto">
-    <SaveBar dirty={draft.dirty} {saving} error={blocked} onSave={save} onDiscard={discard} />
+    <SaveBar dirty={draft.dirty} {saving} error={blocked} onSave={() => save()} onDiscard={discard} />
   </div>
 </div>
 
@@ -280,6 +297,7 @@
   method={storage.method}
   {entries}
   {blocked}
+  {saving}
   onCreate={create}
   {onOpenLoginMethod}
   {variables}

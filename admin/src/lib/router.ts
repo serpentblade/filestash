@@ -137,7 +137,11 @@ if (typeof window !== "undefined") {
   sync()
   window.addEventListener("popstate", () => void onPopState())
   window.addEventListener("beforeunload", (e) => {
-    if ([...guards].some((g) => g.isDirty())) e.preventDefault()
+    if ([...guards].some((g) => g.isDirty())) {
+      e.preventDefault()
+      // older browsers only prompt when returnValue is set
+      e.returnValue = ""
+    }
   })
   document.addEventListener("click", (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return

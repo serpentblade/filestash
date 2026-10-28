@@ -60,6 +60,9 @@ const toStrings = (o: Record<string, unknown>): Record<string, string> => {
   return out
 }
 
+// identity_provider.params as the flat string map the login method form edits
+export const parseMethodParams = (s: unknown): Record<string, string> => toStrings(parseJSONObject(s))
+
 const normMethod = (m: unknown): string | null => (typeof m === "string" && m !== "" ? m : null)
 
 const emptyLeftovers = (): Leftovers => ({ relatedLabels: [], paramKeys: [], paramValues: {} })
@@ -72,7 +75,7 @@ export function newKey(): string {
 
 export function loadStorage(connections: Connection[], mw: Middleware): StorageState {
   const method = normMethod(mw?.identity_provider?.type)
-  const methodParams = toStrings(parseJSONObject(mw?.identity_provider?.params))
+  const methodParams = parseMethodParams(mw?.identity_provider?.params)
   const related = splitRelated(mw?.attribute_mapping?.related_backend)
   const params = parseJSONObject(mw?.attribute_mapping?.params)
   const labels = new Set(connections.map((c) => c.label))
@@ -96,7 +99,9 @@ export function loadStorage(connections: Connection[], mw: Middleware): StorageS
   leftovers.paramKeys = Object.keys(params).filter((k) => method === null || !labels.has(k))
   for (const k of leftovers.paramKeys) leftovers.paramValues[k] = structuredClone(params[k])
 
-  return { entries, method, methodParams, leftovers, loadedLabels: [...labels] }
+  // trimmed too: a saved label is trimmed, so a leftover matching either form is never rebound
+  const loadedLabels = [...new Set([...labels, ...[...labels].map((l) => (typeof l === "string" ? l.trim() : l))])]
+  return { entries, method, methodParams, leftovers, loadedLabels }
 }
 
 export function saveStorage(
@@ -140,6 +145,34 @@ export function saveStorage(
       attribute_mapping: { related_backend: related.join(", "), params: JSON.stringify(params) },
     },
   }
+}
+
+export type IdentityProvider = { type: string | null; params: string }
+
+// What the login method dialog asks a save to write. edited holds the keys changed
+// from what the dialog loaded (null = cleared); null edited means write params whole.
+export type IdentityEdit = {
+  method: string | null
+  params: Record<string, string>
+  edited: Record<string, string | null> | null
+}
+
+// The identity provider to write: the server's own (plugins rewrite its params at
+// runtime, e.g. local users and MFA) unless the login method dialog is saving, and
+// then only what the dialog changed when the method stays the same.
+export function mergeIdentity(fresh: IdentityProvider | undefined, edit: IdentityEdit | null): IdentityProvider {
+  if (edit === null) return structuredClone(fresh ?? { type: "", params: "{}" })
+  const m = normMethod(edit.method)
+  if (m === null) return { type: "", params: "{}" }
+  if (edit.edited !== null && m === normMethod(fresh?.type)) {
+    const params = parseJSONObject(fresh?.params)
+    for (const [k, v] of Object.entries(edit.edited)) {
+      if (v === null) delete params[k]
+      else params[k] = v
+    }
+    return { type: m, params: JSON.stringify(params) }
+  }
+  return { type: m, params: JSON.stringify(edit.params) }
 }
 
 export function validateLabel(label: string, others: string[]): string | null {
