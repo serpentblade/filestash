@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "$lib/i18n"
   import { onMount } from "svelte"
   import Loader2Icon from "@lucide/svelte/icons/loader-2"
   import { getRelease } from "$lib/api/endpoints"
@@ -20,14 +21,14 @@
 </script>
 
 <div class="space-y-4">
-  <h1 class="text-2xl font-semibold">About</h1>
+  <h1 class="text-2xl font-semibold">{t("About")}</h1>
   {#if failed}
     <div class="flex flex-col items-start gap-3" role="alert">
-      <p>Could not load the release information</p>
-      <Button onclick={load}>Retry</Button>
+      <p>{t("Could not load the release information")}</p>
+      <Button onclick={load}>{t("Retry")}</Button>
     </div>
   {:else if html === null}
-    <div role="status" aria-label="Loading"><Loader2Icon class="size-6 animate-spin" /></div>
+    <div role="status" aria-label={t("Loading")}><Loader2Icon class="size-6 animate-spin" /></div>
   {:else}
     <div data-testid="release" class="overflow-x-auto">{@html html}</div>
   {/if}

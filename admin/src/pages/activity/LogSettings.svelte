@@ -5,6 +5,7 @@
   import { saveConfig } from "$lib/config/save"
   import { toValues, type Schema } from "$lib/config/schema"
   import { createDraft } from "$lib/draft.svelte"
+  import { t } from "$lib/i18n"
   import SaveBar from "$lib/components/SaveBar.svelte"
   import SchemaForm from "$lib/components/SchemaForm.svelte"
   import { Skeleton } from "$lib/components/ui/skeleton"
@@ -32,17 +33,17 @@
       try {
         await saveConfig(({ values, connections }) => ({ values: { ...values, log: v }, connections }))
       } catch (err) {
-        toast.error(`Couldn't save: ${err instanceof Error ? err.message : String(err)}`)
+        toast.error(t("Couldn't save: {{VALUE}}", err instanceof Error ? err.message : String(err)))
         throw err
       }
-      toast.success("Saved")
+      toast.success(t("Saved"))
     })
     saving = false
   }
 </script>
 
 {#if failed}
-  <p class="text-destructive text-sm">Couldn't load the log settings.</p>
+  <p class="text-destructive text-sm">{t("Couldn't load the log settings.")}</p>
 {:else if schema}
   <SchemaForm {schema} bind:values={draft.value} prefix="log." />
   <SaveBar dirty={draft.dirty} {saving} onSave={save} onDiscard={() => draft.reset()} />

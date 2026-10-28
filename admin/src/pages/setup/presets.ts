@@ -1,9 +1,8 @@
 import type { Connection } from "$lib/types"
+import { t } from "$lib/i18n"
 
 export type Preset = {
   name: string
-  // rendered as HTML in the toast: a hard-coded constant (it contains links)
-  success: string
   input_storage?: string[]
   input_auth?: string[]
   output_connections: Connection[]
@@ -21,7 +20,6 @@ export type PresetOutput = {
 export const PRESETS: Preset[] = [
   {
     name: "Local files - just for me",
-    success: "<span>Ready! Visit <a class=\"wavy\" href=\"login\">/login</a> with your admin password to start browsing files.</span>",
     output_connections: [{ type: "local", label: "local" }],
     output_identity_provider: { type: "passthrough", params: "{\"strategy\":\"password_only\"}" },
     output_attribute_mapping: { related_backend: "local", params: "{\"local\":{\"type\":\"local\",\"password\":\"{{ .password }}\"}}" },
@@ -29,7 +27,6 @@ export const PRESETS: Preset[] = [
   },
   {
     name: "Local Storage - Local Users",
-    success: "<span>Applied! Create your first users from <a class=\"wavy\" href=\"admin/simple-user-management\">/admin/simple-user-management</a></span>",
     input_storage: ["admin_password"],
     output_connections: [{ type: "local", label: "local" }],
     output_identity_provider: { type: "local", params: "{}" },
@@ -41,7 +38,6 @@ export const PRESETS: Preset[] = [
   },
   {
     name: "SFTP Storage - Use existing credentials",
-    success: "<span>Done! Visit <a class=\"wavy\" href=\"login\">/login</a> and authenticate with your SFTP username and password or private key.</span>",
     input_storage: ["sftp_hostname"],
     output_connections: [{ type: "sftp", label: "sftp" }],
     output_identity_provider: { type: "passthrough", params: "{\"strategy\":\"username_and_password\"}" },
@@ -50,7 +46,6 @@ export const PRESETS: Preset[] = [
   },
   {
     name: "S3 Storage - Use your AWS credentials",
-    success: "<span>All set! Visit <a class=\"wavy\" href=\"login\">/login</a> - use your access_key_id as username, secret_access_key as password.</span>",
     output_connections: [{ type: "s3", label: "s3" }],
     output_identity_provider: { type: "passthrough", params: "{\"strategy\":\"username_and_password\"}" },
     output_attribute_mapping: { related_backend: "s3", params: "{\"s3\":{\"type\":\"s3\",\"access_key_id\":\"{{ .user }}\",\"secret_access_key\":\"{{ .password }}\"}}" },
@@ -58,7 +53,6 @@ export const PRESETS: Preset[] = [
   },
   {
     name: "S3 Storage - Multiple users",
-    success: "<span>All set! Create your first users from <a class=\"wavy\" href=\"admin/simple-user-management\">/admin/simple-user-management</a></span>",
     input_storage: ["access_key_id", "secret_access_key"],
     output_connections: [{ type: "s3", label: "s3" }],
     output_identity_provider: { type: "local", params: "{}" },
@@ -67,7 +61,6 @@ export const PRESETS: Preset[] = [
   },
   {
     name: "FTP Storage - WordPress Users",
-    success: "<span>Done! Visit <a class=\"wavy\" href=\"login\">/login</a> - use your wordpress credentials to access your FTP.</span>",
     input_storage: ["ftp_hostname", "ftp_username", "ftp_password"],
     input_auth: ["wordpress_url"],
     output_connections: [{ type: "ftp", label: "ftp" }],
@@ -76,6 +69,45 @@ export const PRESETS: Preset[] = [
     isOK: { storage: "ftp", auth: "wordpress" },
   },
 ]
+
+// Display text is built on demand: the language is not loaded when this module is imported.
+const NAMES: Record<string, () => string> = {
+  "Local files - just for me": () => t("Local files - just for me"),
+  "Local Storage - Local Users": () => t("Local Storage - Local Users"),
+  "SFTP Storage - Use existing credentials": () => t("SFTP Storage - Use existing credentials"),
+  "S3 Storage - Use your AWS credentials": () => t("S3 Storage - Use your AWS credentials"),
+  "S3 Storage - Multiple users": () => t("S3 Storage - Multiple users"),
+  "FTP Storage - WordPress Users": () => t("FTP Storage - WordPress Users"),
+}
+
+export const presetName = (p: Preset): string => NAMES[p.name]?.() ?? p.name
+
+// HTML for the toast: the links are hard-coded constants, never user input.
+export function presetSuccess(p: Preset): string {
+  const login = '<a class="wavy" href="login">/login</a>'
+  const users = '<a class="wavy" href="admin/simple-user-management">/admin/simple-user-management</a>'
+  let text: string
+  switch (p.name) {
+    case "Local files - just for me":
+      text = t("Ready! Visit {{LINK}} with your admin password to start browsing files.", { LINK: login })
+      break
+    case "Local Storage - Local Users":
+      text = t("Applied! Create your first users from {{LINK}}", { LINK: users })
+      break
+    case "SFTP Storage - Use existing credentials":
+      text = t("Done! Visit {{LINK}} and authenticate with your SFTP username and password or private key.", { LINK: login })
+      break
+    case "S3 Storage - Use your AWS credentials":
+      text = t("All set! Visit {{LINK}} - use your access_key_id as username, secret_access_key as password.", { LINK: login })
+      break
+    case "S3 Storage - Multiple users":
+      text = t("All set! Create your first users from {{LINK}}", { LINK: users })
+      break
+    default:
+      text = t("Done! Visit {{LINK}} - use your wordpress credentials to access your FTP.", { LINK: login })
+  }
+  return `<span>${text}</span>`
+}
 
 export const presetFields = (p: Preset): string[] => [...(p.input_storage ?? []), ...(p.input_auth ?? [])]
 
@@ -118,43 +150,43 @@ export function healthChecks(ctx: HealthContext): Check[] {
   return [
     {
       key: "https",
-      nameSuccess: "You're using HTTPS",
-      nameFailure: "Your connection isn't encrypted",
+      nameSuccess: t("You're using HTTPS"),
+      nameFailure: t("Your connection isn't encrypted"),
       pass: ctx.protocol !== "http:",
       severe: true,
-      message: "Set up HTTPS to secure your connection and protect your data in transit",
+      message: t("Set up HTTPS to secure your connection and protect your data in transit"),
     },
     {
       key: "user",
-      nameSuccess: "Running as non root user: '" + ctx.user + "'",
-      nameFailure: "Running as root",
+      nameSuccess: t("Running as non root user: '{{VALUE}}'", ctx.user),
+      nameFailure: t("Running as root"),
       pass: ctx.user !== "root",
       severe: true,
-      message: "You should run as a non-privileged user, running as root is risky.",
+      message: t("You should run as a non-privileged user, running as root is risky."),
     },
     {
       key: "storage",
       nameSuccess: "",
-      nameFailure: ctx.connections === 0 ? "Almost there!" : "Want to try something different?",
+      nameFailure: ctx.connections === 0 ? t("Almost there!") : t("Want to try something different?"),
       pass: false,
       severe: ctx.connections === 0,
-      message: "Pick a preset that best fits your needs:",
+      message: t("Pick a preset that best fits your needs:"),
     },
     {
       key: "support",
-      nameSuccess: "Enterprise Support: active",
-      nameFailure: "Enterprise Support: no",
+      nameSuccess: t("Enterprise Support: active"),
+      nameFailure: t("Enterprise Support: no"),
       pass: ctx.license !== "agpl",
       severe: false,
-      message: "Need guaranteed response times? Upgrade to a support plan with 9x5 or 24x7 coverage and SLAs",
+      message: t("Need guaranteed response times? Upgrade to a support plan with 9x5 or 24x7 coverage and SLAs"),
     },
     {
       key: "license",
-      nameSuccess: "Enterprise License: active",
-      nameFailure: "You're on the AGPL version",
+      nameSuccess: t("Enterprise License: active"),
+      nameFailure: t("You're on the AGPL version"),
       pass: ctx.license !== "agpl",
       severe: false,
-      message: "Upgrade to Filestash enterprise for production usage in a commercial environment",
+      message: t("Upgrade to Filestash enterprise for production usage in a commercial environment"),
     },
   ]
 }

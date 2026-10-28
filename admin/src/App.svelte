@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "$lib/i18n"
   import "./app.css"
   import { onMount } from "svelte"
   import { Toaster } from "$lib/components/ui/sonner"
@@ -77,8 +78,8 @@
     {:else if $route?.name === "about"}
       <AboutPage />
     {:else}
-      <h1 class="text-2xl font-semibold">Page not found</h1>
-      <a class="mt-2 inline-block underline" data-link href={href("admin/storage")}>Back to Storage</a>
+      <h1 class="text-2xl font-semibold">{t("Page not found")}</h1>
+      <a class="mt-2 inline-block underline" data-link href={href("admin/storage")}>{t("Back to Storage")}</a>
     {/if}
   </Layout>
   <LoginDialog />
@@ -86,17 +87,17 @@
   <div class="flex min-h-screen items-center justify-center p-6">
     {#if failed}
       <div class="flex flex-col items-center gap-3">
-        <p>Can't reach the server</p>
-        <Button onclick={check}>Retry</Button>
+        <p>{t("Can't reach the server")}</p>
+        <Button onclick={check}>{t("Retry")}</Button>
       </div>
     {:else}
-      <div role="status" aria-label="Loading"><Loader2Icon class="size-6 animate-spin" /></div>
+      <div role="status" aria-label={t("Loading")}><Loader2Icon class="size-6 animate-spin" /></div>
     {/if}
   </div>
 {:else if session.isAdmin === false}
   <div class="flex min-h-screen items-center justify-center p-6">
     <div class="w-full max-w-sm">
-      <h1 class="mb-4 text-2xl font-semibold">Admin console</h1>
+      <h1 class="mb-4 text-2xl font-semibold">{t("Admin console")}</h1>
       <LoginForm />
     </div>
   </div>

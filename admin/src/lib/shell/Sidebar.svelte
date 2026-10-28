@@ -1,14 +1,15 @@
 <script lang="ts">
+  import { t } from "$lib/i18n"
   import { onMount } from "svelte"
   import { route, href } from "$lib/router"
   import { getRelease } from "$lib/api/endpoints"
 
   const items = [
-    { label: "Authentication", path: "admin/authentication", names: ["authentication"] },
-    { label: "Storage", path: "admin/storage", names: ["storage"] },
-    { label: "Workflow", path: "admin/workflow", names: ["workflow-list", "workflow-edit", "workflow-new"] },
-    { label: "Activity", path: "admin/activity", names: ["activity"] },
-    { label: "Settings", path: "admin/settings", names: ["settings"] },
+    { label: () => t("Authentication"), path: "admin/authentication", names: ["authentication"] },
+    { label: () => t("Storage"), path: "admin/storage", names: ["storage"] },
+    { label: () => t("Workflow"), path: "admin/workflow", names: ["workflow-list", "workflow-edit", "workflow-new"] },
+    { label: () => t("Activity"), path: "admin/activity", names: ["activity"] },
+    { label: () => t("Settings"), path: "admin/settings", names: ["settings"] },
   ]
 
   let version = $state("")
@@ -27,12 +28,12 @@
       data-link
       href={href(item.path)}
       aria-current={$route && item.names.includes($route.name) ? "page" : undefined}
-    >{item.label}</a>
+    >{item.label()}</a>
   {/each}
   <a
     class="{link} mt-auto text-muted-foreground"
     data-link
     href={href("admin/about")}
     aria-current={$route?.name === "about" ? "page" : undefined}
-  >{version || "About"}</a>
+  >{version || t("About")}</a>
 </nav>

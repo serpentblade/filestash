@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, storageName } from "$lib/i18n"
   import { onDestroy } from "svelte"
   import { addGuard } from "$lib/router"
   import type { StorageEntry } from "$lib/config/storage"
@@ -64,9 +65,9 @@
   async function requestClose() {
     if (touched) {
       const ok = await confirm({
-        title: "Discard this storage?",
-        body: "What you entered for the new storage will be lost.",
-        confirmLabel: "Discard",
+        title: t("Discard this storage?"),
+        body: t("What you entered for the new storage will be lost."),
+        confirmLabel: t("Discard"),
         destructive: true,
       })
       if (!ok) return
@@ -79,9 +80,9 @@
     isDirty: () => open && touched,
     confirm: () =>
       confirm({
-        title: "Discard this storage?",
-        body: "What you entered for the new storage will be lost.",
-        confirmLabel: "Discard",
+        title: t("Discard this storage?"),
+        body: t("What you entered for the new storage will be lost."),
+        confirmLabel: t("Discard"),
         destructive: true,
       }),
   })
@@ -103,18 +104,18 @@
 <Dialog.Root bind:open={() => open, (v) => (v ? (open = true) : void requestClose())}>
   <Dialog.Content class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
     <Dialog.Header>
-      <Dialog.Title>Add storage</Dialog.Title>
-      <Dialog.Description>Pick a storage type, then choose how people get in.</Dialog.Description>
+      <Dialog.Title>{t("Add storage")}</Dialog.Title>
+      <Dialog.Description>{t("Pick a storage type, then choose how people get in.")}</Dialog.Description>
     </Dialog.Header>
 
-    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4" role="group" aria-label="Storage type">
-      {#each types as t (t)}
+    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4" role="group" aria-label={t("Storage type")}>
+      {#each types as type (type)}
         <Button
           variant="outline"
-          aria-pressed={entry?.type === t}
-          class={cn(entry?.type === t && "border-primary bg-muted")}
-          onclick={() => pick(t)}
-        >{t}</Button>
+          aria-pressed={entry?.type === type}
+          class={cn(entry?.type === type && "border-primary bg-muted")}
+          onclick={() => pick(type)}
+        >{storageName(type)}</Button>
       {/each}
     </div>
 
@@ -132,9 +133,9 @@
       <p id="create-blocked" role="alert" class="text-destructive text-sm">{blocked}</p>
     {/if}
     <Dialog.Footer>
-      <Button variant="outline" onclick={requestClose}>Cancel</Button>
+      <Button variant="outline" onclick={requestClose}>{t("Cancel")}</Button>
       <Button onclick={create} disabled={invalid || busy || saving || blocked !== ""}
-        aria-describedby={blocked ? "create-blocked" : undefined}>Create</Button>
+        aria-describedby={blocked ? "create-blocked" : undefined}>{t("Create")}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

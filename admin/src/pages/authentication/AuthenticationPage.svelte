@@ -16,6 +16,7 @@
   } from "$lib/config/storage"
   import type { Schema } from "$lib/types"
   import { addGuard, href } from "$lib/router"
+  import { t, methodName } from "$lib/i18n"
   import { confirm } from "$lib/confirm.svelte"
   import SaveBar from "$lib/components/SaveBar.svelte"
   import SchemaForm from "$lib/components/SchemaForm.svelte"
@@ -124,9 +125,9 @@
     isDirty: () => dirty,
     confirm: () =>
       confirm({
-        title: "Discard unsaved changes?",
-        body: "You have unsaved changes on this page. Leave without saving?",
-        confirmLabel: "Discard",
+        title: t("Discard unsaved changes?"),
+        body: t("You have unsaved changes on this page. Leave without saving?"),
+        confirmLabel: t("Discard"),
         destructive: true,
       }),
   })
@@ -148,9 +149,9 @@
     const edited = next !== null && !methodChanged ? editedKeys(next, params) : null
     if (warning) {
       const ok = await confirm({
-        title: `Switch to ${next ?? "None"}?`,
+        title: t("Switch to {{VALUE}}?", methodName(next)),
         body: warning,
-        confirmLabel: "Switch",
+        confirmLabel: t("Switch"),
         destructive: next === null || savedMethod === "local",
       })
       if (!ok) return
@@ -174,11 +175,11 @@
         }
       })
     } catch (err) {
-      toast.error(`Couldn't save: ${err instanceof Error ? err.message : String(err)}`)
+      toast.error(t("Couldn't save: {{VALUE}}", err instanceof Error ? err.message : String(err)))
       saving = false
       return
     }
-    toast.success("Saved")
+    toast.success(t("Saved"))
     try {
       storage = await fetchStorage()
       resetForm()
@@ -191,59 +192,58 @@
 </script>
 
 <div class="flex min-h-full flex-col">
-  <h1 class="mb-2 text-2xl font-semibold">Authentication</h1>
+  <h1 class="mb-2 text-2xl font-semibold">{t("Authentication")}</h1>
   <p class="text-muted-foreground mb-6 text-sm">
-    How people prove who they are before a storage opens for them. Each storage then chooses whether
-    people sign in with this method or enter their own login.
+    {t("How people prove who they are before a storage opens for them. Each storage then chooses whether people sign in with this method or enter their own login.")}
   </p>
 
   {#if status === "loading"}
-    <div class="space-y-2" role="status" aria-label="Loading">
+    <div class="space-y-2" role="status" aria-label={t("Loading")}>
       <Skeleton class="h-9 w-full max-w-md" />
       <Skeleton class="h-24 w-full max-w-2xl" />
     </div>
   {:else if status === "failed"}
     <div class="space-y-3">
-      <p>Couldn't load the authentication settings.</p>
-      <Button onclick={load}>Retry</Button>
+      <p>{t("Couldn't load the authentication settings.")}</p>
+      <Button onclick={load}>{t("Retry")}</Button>
     </div>
   {:else}
     <div class="max-w-2xl space-y-6">
-      <div class="flex flex-wrap gap-2" role="group" aria-label="Login method">
+      <div class="flex flex-wrap gap-2" role="group" aria-label={t("Login method")}>
         {#each [null, ...methods] as m (m ?? "")}
           <Button
             variant={method === m ? "default" : "outline"}
             aria-pressed={method === m}
             disabled={saving}
             onclick={() => pick(m)}
-          >{m ?? "None"}</Button>
+          >{methodName(m)}</Button>
         {/each}
       </div>
 
       {#if !loaded}
-        <p class="text-muted-foreground text-sm">Couldn't load the available login methods.</p>
+        <p class="text-muted-foreground text-sm">{t("Couldn't load the available login methods.")}</p>
       {/if}
 
       {#if method === null}
         <p class="text-muted-foreground text-sm">
-          No login method. Each storage asks people for their own connection details.
+          {t("No login method. Each storage asks people for their own connection details.")}
         </p>
       {:else if middlewares[method] && paramsByMethod[method]}
         {#key method}
           <SchemaForm schema={middlewares[method]} bind:values={paramsByMethod[method]} hidden={["type"]} />
         {/key}
         <p class="text-muted-foreground text-sm">
-          Available to connection details: <code>{variables.join(" ")}</code>
+          {t("Available to connection details:")} <code>{variables.join(" ")}</code>
         </p>
       {/if}
 
       <p class="text-muted-foreground text-sm">
         {#if usedBy.length > 0}
-          Storages signing in with {savedMethod}: {usedBy.join(", ")}.
+          {t("Storages signing in with {{METHOD}}: {{LABELS}}.", { METHOD: methodName(savedMethod), LABELS: usedBy.join(", ") })}
         {:else}
-          No storage signs in with a login method yet.
+          {t("No storage signs in with a login method yet.")}
         {/if}
-        <a class="underline" data-link href={href("admin/storage")}>Go to Storage</a>
+        <a class="underline" data-link href={href("admin/storage")}>{t("Go to Storage")}</a>
       </p>
 
       {#if warning}
@@ -256,7 +256,7 @@
     <SaveBar
       {dirty}
       {saving}
-      saveLabel={methodChanged ? `Switch to ${method ?? "None"}` : "Save"}
+      saveLabel={methodChanged ? t("Switch to {{VALUE}}", methodName(method)) : t("Save")}
       onSave={save}
       onDiscard={resetForm}
     />

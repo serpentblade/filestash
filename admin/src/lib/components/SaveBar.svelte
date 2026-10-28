@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { t } from "$lib/i18n"
   import { Button } from "$lib/components/ui/button"
   import { confirm } from "$lib/confirm.svelte"
 
-  let { dirty, onSave, onDiscard, saving = false, saveLabel = "Save", error = "" }: {
+  let { dirty, onSave, onDiscard, saving = false, saveLabel = "", error = "" }: {
     dirty: boolean
     onSave: () => void
     onDiscard: () => void
@@ -13,9 +14,9 @@
 
   async function discard() {
     const ok = await confirm({
-      title: "Discard changes?",
-      body: "Your unsaved changes will be lost.",
-      confirmLabel: "Discard",
+      title: t("Discard changes?"),
+      body: t("Your unsaved changes will be lost."),
+      confirmLabel: t("Discard"),
       destructive: true,
     })
     if (ok) onDiscard()
@@ -28,10 +29,10 @@
       {#if error}
         <span role="alert" class="text-destructive">{error}</span>
       {:else}
-        <span>Unsaved changes</span>
+        <span>{t("Unsaved changes")}</span>
       {/if}
     </div>
-    <Button variant="outline" onclick={discard} disabled={saving || !dirty}>Discard</Button>
-    <Button onclick={onSave} disabled={saving || error !== ""}>{saving ? "Saving…" : saveLabel}</Button>
+    <Button variant="outline" onclick={discard} disabled={saving || !dirty}>{t("Discard")}</Button>
+    <Button onclick={onSave} disabled={saving || error !== ""}>{saving ? t("Saving…") : saveLabel || t("Save")}</Button>
   </div>
 {/if}

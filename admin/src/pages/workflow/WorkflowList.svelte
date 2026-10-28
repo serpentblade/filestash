@@ -3,6 +3,7 @@
   import { Plus } from "@lucide/svelte"
   import { getWorkflows } from "$lib/api/endpoints"
   import { href, navigate } from "$lib/router"
+  import { t } from "$lib/i18n"
   import { Badge } from "$lib/components/ui/badge"
   import { Button } from "$lib/components/ui/button"
   import * as Dialog from "$lib/components/ui/dialog"
@@ -37,17 +38,17 @@
 </script>
 
 <div class="mb-6 flex items-center justify-between">
-  <h1 class="text-2xl font-semibold">Workflows</h1>
-  <Button variant="outline" onclick={() => { name = ""; open = true }} disabled={workflows === null}><Plus /> New workflow</Button>
+  <h1 class="text-2xl font-semibold">{t("Workflows")}</h1>
+  <Button variant="outline" onclick={() => { name = ""; open = true }} disabled={workflows === null}><Plus /> {t("New workflow")}</Button>
 </div>
 
 {#if failed}
-  <p class="text-destructive text-sm">Couldn't load the workflows.</p>
+  <p class="text-destructive text-sm">{t("Couldn't load the workflows.")}</p>
 {:else if workflows === null}
   <Skeleton class="h-24 w-full" />
 {:else if workflows.length === 0}
   <button type="button" class="text-muted-foreground hover:bg-muted w-full rounded-lg border border-dashed p-8 text-center" onclick={() => { name = ""; open = true }}>
-    Create your first workflow
+    {t("Create your first workflow")}
   </button>
 {:else}
   <ul class="space-y-3">
@@ -61,7 +62,7 @@
           <span class="flex items-baseline gap-2">
             <span class="min-w-0 truncate font-medium">{w.name}</span>
             {#if formatDate(w.updated_at)}<span class="text-muted-foreground text-sm">({formatDate(w.updated_at)})</span>{/if}
-            {#if !w.published}<Badge variant="secondary">Draft</Badge>{/if}
+            {#if !w.published}<Badge variant="secondary">{t("Draft")}</Badge>{/if}
           </span>
           <span class="mt-2 flex flex-wrap items-center gap-1.5 text-sm">
             <Badge variant="outline">{w.trigger.name}</Badge>
@@ -79,19 +80,19 @@
 <Dialog.Root bind:open>
   <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
-      <Dialog.Title>New workflow</Dialog.Title>
-      <Dialog.Description>Name it, then pick what starts it.</Dialog.Description>
+      <Dialog.Title>{t("New workflow")}</Dialog.Title>
+      <Dialog.Description>{t("Name it, then pick what starts it.")}</Dialog.Description>
     </Dialog.Header>
     <div class="space-y-2">
-      <Label for="new-workflow-name">Name</Label>
-      <Input id="new-workflow-name" placeholder="Workflow name" bind:value={name} />
+      <Label for="new-workflow-name">{t("Name")}</Label>
+      <Input id="new-workflow-name" placeholder={t("Workflow name")} bind:value={name} />
     </div>
     <div class="space-y-2">
-      <p class="text-sm font-medium">Trigger</p>
-      <div class="grid gap-2" role="group" aria-label="Trigger">
-        {#each triggers as t (t.name)}
-          <Button variant="outline" class="justify-start" onclick={() => create(t.name)}>
-            <span class="[&_svg]:size-4 [&_svg]:fill-current" aria-hidden="true">{@html t.icon}</span>{t.title}
+      <p class="text-sm font-medium">{t("Trigger")}</p>
+      <div class="grid gap-2" role="group" aria-label={t("Trigger")}>
+        {#each triggers as trig (trig.name)}
+          <Button variant="outline" class="justify-start" onclick={() => create(trig.name)}>
+            <span class="[&_svg]:size-4 [&_svg]:fill-current" aria-hidden="true">{@html trig.icon}</span>{trig.title}
           </Button>
         {/each}
       </div>

@@ -44,7 +44,7 @@ describe("methodChangeWarning", () => {
   it("warning lists sign-in storages on switch", () => {
     const w = methodChangeWarning(state("htpasswd", "s3"), "ldap")!
     expect(w).toContain("s3")
-    expect(w).toContain("ldap")
+    expect(w).toContain("LDAP")
     expect(w).not.toContain("sftp")
   })
 
@@ -60,7 +60,7 @@ describe("methodChangeWarning", () => {
 
   it("switching away from local says the user list will be cleared", () => {
     const cleared = "The local user list will be cleared."
-    expect(methodChangeWarning(state("local", "s3"), "ldap")).toBe(`s3 will now sign in with ldap. ${cleared}`)
+    expect(methodChangeWarning(state("local", "s3"), "ldap")).toBe(`s3 will now sign in with LDAP. ${cleared}`)
     expect(methodChangeWarning(state("local", "s3"), null)).toMatch(new RegExp(`removed\\. ${cleared}$`))
     expect(methodChangeWarning(state("local", ""), "htpasswd")).toBe(cleared)
     expect(methodChangeWarning(state("local", ""), "local")).toBeNull()

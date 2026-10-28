@@ -2,6 +2,7 @@
   import { onMount } from "svelte"
   import { getLogs } from "$lib/api/endpoints"
   import { handlePollError, poll } from "$lib/hooks/poll"
+  import { t } from "$lib/i18n"
   import { bucketLogTimes, type Buckets } from "./chart"
 
   let data = $state<Buckets | null>(null)
@@ -18,12 +19,12 @@
 </script>
 
 {#if failed}
-  <p class="text-destructive text-sm">Couldn't load logs</p>
+  <p class="text-destructive text-sm">{t("Couldn't load logs")}</p>
 {/if}
 {#if data && data.counts.every((c) => c < 0)}
-  <p class="text-muted-foreground text-sm">No log events yet</p>
+  <p class="text-muted-foreground text-sm">{t("No log events yet")}</p>
 {:else if data}
-  <div class="flex h-24 items-end justify-end" aria-label="Log events over time">
+  <div class="flex h-24 items-end justify-end" aria-label={t("Log events over time")}>
     {#each data.counts as count, i (i)}
       {#if count >= 0}
         <div
@@ -36,7 +37,7 @@
   </div>
   <div class="text-muted-foreground flex justify-between text-xs">
     <span>{time(data.start)}</span>
-    <span class="italic">Log Events</span>
+    <span class="italic">{t("Log Events")}</span>
     <span>{time(data.end)}</span>
   </div>
 {/if}

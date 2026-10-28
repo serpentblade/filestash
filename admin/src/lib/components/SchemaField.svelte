@@ -9,6 +9,7 @@
   import * as Select from "$lib/components/ui/select"
   import { Button } from "$lib/components/ui/button"
   import Help from "./Help.svelte"
+  import { fieldLabel, optionLabel, t } from "$lib/i18n"
 
   let { el, name, value = $bindable() }: { el: FormElement; name: string; value?: unknown } = $props()
 
@@ -36,10 +37,10 @@
     {#if el.type === "boolean"}
       <div class="flex items-center gap-3">
         <Switch id={name} {name} disabled={el.readonly} checked={Boolean(value)} onCheckedChange={(c) => (value = coerce(el, c))} />
-        <Label for={name}>{el.label}</Label>
+        <Label for={name}>{fieldLabel(el.label)}</Label>
       </div>
     {:else}
-      <Label for={name}>{el.label}</Label>
+      <Label for={name}>{fieldLabel(el.label)}</Label>
       {#if el.type === "long_text" || el.type === "json"}
         <Textarea id={name} {name} class="field-sizing-fixed min-h-24 w-full max-w-full min-w-0 break-all whitespace-pre-wrap" placeholder={el.placeholder} disabled={el.readonly} value={text}
           oninput={(e) => (value = coerce(el, e.currentTarget.value))} />
@@ -47,7 +48,7 @@
         <div class="flex gap-2">
           <Input id={name} {name} type={reveal ? "text" : "password"} placeholder={el.placeholder} disabled={el.readonly}
             value={text} oninput={(e) => (value = coerce(el, e.currentTarget.value))} />
-          <Button type="button" variant="outline" onclick={() => (reveal = !reveal)}>{reveal ? "Hide" : "Show"}</Button>
+          <Button type="button" variant="outline" onclick={() => (reveal = !reveal)}>{reveal ? t("Hide") : t("Show")}</Button>
         </div>
       {:else if el.type === "bcrypt"}
         <Input id={name} {name} type="password" placeholder={el.placeholder} disabled={el.readonly} value={text}
@@ -64,10 +65,10 @@
       {:else if el.type === "select"}
         <Select.Root type="single" {name} disabled={el.readonly} value={text}
           onValueChange={(v) => (value = coerce(el, v))}>
-          <Select.Trigger id={name} class="w-full">{text || el.placeholder || "Select…"}</Select.Trigger>
+          <Select.Trigger id={name} class="w-full">{text ? optionLabel(text) : el.placeholder || t("Select…")}</Select.Trigger>
           <Select.Content>
             {#each el.options ?? [] as opt (opt)}
-              <Select.Item value={opt} label={opt}>{opt}</Select.Item>
+              <Select.Item value={opt} label={optionLabel(opt)}>{optionLabel(opt)}</Select.Item>
             {/each}
           </Select.Content>
         </Select.Root>

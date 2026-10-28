@@ -9,6 +9,7 @@
   import { createDraft } from "$lib/draft.svelte"
   import { poll, handlePollError } from "$lib/hooks/poll"
   import { href, navigate, route } from "$lib/router"
+  import { t } from "$lib/i18n"
   import SaveBar from "$lib/components/SaveBar.svelte"
   import { Button } from "$lib/components/ui/button"
   import { Input } from "$lib/components/ui/input"
@@ -103,7 +104,7 @@
 
   async function save() {
     if (draft.value.name.trim() === "") {
-      toast.error("Give the workflow a name")
+      toast.error(t("Give the workflow a name"))
       return
     }
     const id = existingId ?? newId
@@ -112,32 +113,32 @@
       try {
         await upsertWorkflow(toWorkflow($state.snapshot(v) as Edit, id))
       } catch (err) {
-        toast.error(`Couldn't save: ${err instanceof Error ? err.message : String(err)}`)
+        toast.error(t("Couldn't save: {{VALUE}}", err instanceof Error ? err.message : String(err)))
         throw err
       }
     })
     saving = false
     if (!ok) return
-    toast.success("Saved")
+    toast.success(t("Saved"))
     if (isNew) void navigate(`admin/workflow/${encodeURIComponent(id)}`, { replace: true })
   }
 
   async function remove() {
     if (existingId === null) return
     const ok = await confirm({
-      title: `Delete ${draft.value.name || "this workflow"}?`,
-      body: "This workflow will be removed.",
-      confirmLabel: "Delete",
+      title: draft.value.name ? t("Delete {{VALUE}}?", draft.value.name) : t("Delete this workflow?"),
+      body: t("This workflow will be removed."),
+      confirmLabel: t("Delete"),
       destructive: true,
     })
     if (!ok) return
     try {
       await deleteWorkflow(existingId)
     } catch (err) {
-      toast.error(`Couldn't delete: ${err instanceof Error ? err.message : String(err)}`)
+      toast.error(t("Couldn't delete: {{VALUE}}", err instanceof Error ? err.message : String(err)))
       return
     }
-    toast.success("Deleted")
+    toast.success(t("Deleted"))
     draft.reset()
     void navigate("admin/workflow")
   }
@@ -172,28 +173,28 @@
     if ((from < to && below) || (from > to && !below)) move(from, to)
   }
 
-  const triggerSpec = $derived(triggers.find((t) => t.name === draft.value.trigger.name))
+  const triggerSpec = $derived(triggers.find((x) => x.name === draft.value.trigger.name))
   const specFor = (name: string) => actions.find((a) => a.name === name)
 </script>
 
 {#if status === "loading"}
   <Skeleton class="h-40 w-full" />
 {:else if status === "failed"}
-  <p class="text-destructive text-sm">Couldn't load the workflow.</p>
+  <p class="text-destructive text-sm">{t("Couldn't load the workflow.")}</p>
 {:else if status === "missing"}
-  <h1 class="text-2xl font-semibold">Workflow not found</h1>
-  <a class="mt-2 inline-block underline" data-link href={href("admin/workflow")}>Back to Workflows</a>
+  <h1 class="text-2xl font-semibold">{t("Workflow not found")}</h1>
+  <a class="mt-2 inline-block underline" data-link href={href("admin/workflow")}>{t("Back to workflows")}</a>
 {:else}
   <div class="mb-6 flex flex-wrap items-center gap-3">
-    <Button variant="ghost" size="icon" aria-label="Back to workflows" href={href("admin/workflow")} data-link><ArrowLeft /></Button>
-    <Label for="workflow-name" class="sr-only">Workflow name</Label>
-    <Input id="workflow-name" class="min-w-48 flex-1 text-lg font-semibold" placeholder="Workflow name" bind:value={draft.value.name} />
+    <Button variant="ghost" size="icon" aria-label={t("Back to workflows")} href={href("admin/workflow")} data-link><ArrowLeft /></Button>
+    <Label for="workflow-name" class="sr-only">{t("Workflow name")}</Label>
+    <Input id="workflow-name" class="min-w-48 flex-1 text-lg font-semibold" placeholder={t("Workflow name")} bind:value={draft.value.name} />
     <div class="flex items-center gap-2">
       <Switch id="workflow-published" checked={draft.value.published} onCheckedChange={(c) => (draft.value.published = c)} />
-      <Label for="workflow-published">{draft.value.published ? "Published" : "Draft"}</Label>
+      <Label for="workflow-published">{draft.value.published ? t("Published") : t("Draft")}</Label>
     </div>
     {#if !isNew}
-      <Button variant="destructive" onclick={remove}>Delete</Button>
+      <Button variant="destructive" onclick={remove}>{t("Delete")}</Button>
     {/if}
   </div>
 
@@ -224,7 +225,7 @@
     {/each}
 
     <Select.Root type="single" bind:value={() => "", (v) => addAction(v)}>
-      <Select.Trigger class="w-56" aria-label="Add action">Add action</Select.Trigger>
+      <Select.Trigger class="w-56" aria-label={t("Add action")}>{t("Add action")}</Select.Trigger>
       <Select.Content>
         {#each actions as spec (spec.name)}
           <Select.Item value={spec.name} label={spec.name}>{spec.title}<span class="text-muted-foreground ml-1 text-xs">{spec.name}</span></Select.Item>
@@ -234,8 +235,8 @@
   </div>
 
   {#if !isNew}
-    <h2 class="mt-8 mb-2 text-lg font-semibold">Activity</h2>
-    <pre class="bg-muted max-h-72 overflow-auto rounded-lg p-3 text-xs" aria-label="Workflow activity">{history}</pre>
+    <h2 class="mt-8 mb-2 text-lg font-semibold">{t("Activity")}</h2>
+    <pre class="bg-muted max-h-72 overflow-auto rounded-lg p-3 text-xs" aria-label={t("Workflow activity")}>{history}</pre>
   {/if}
 
   <SaveBar dirty={draft.dirty} {saving} onSave={save} onDiscard={() => draft.reset()} />

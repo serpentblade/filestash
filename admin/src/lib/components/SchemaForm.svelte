@@ -6,6 +6,7 @@
   import SchemaField from "./SchemaField.svelte"
   import SchemaForm from "./SchemaForm.svelte"
   import Help from "./Help.svelte"
+  import { fieldLabel, sectionLabel } from "$lib/i18n"
 
   let { schema, values = $bindable({}), prefix = "", hidden = [] }: {
     schema: Schema
@@ -50,7 +51,7 @@
         <Collapsible.Root class="space-y-4" bind:open={() => open[key] ?? false, (v) => (open[key] = v)}>
           <Collapsible.Trigger>
             {#snippet child({ props })}
-              <Button {...props} variant="ghost" size="sm" type="button">{node.placeholder || node.label}</Button>
+              <Button {...props} variant="ghost" size="sm" type="button">{node.placeholder || fieldLabel(node.label)}</Button>
             {/snippet}
           </Collapsible.Trigger>
           <Collapsible.Content class="space-y-4">
@@ -66,7 +67,7 @@
       {/if}
     {:else}
       <section class="space-y-4">
-        <h3 class="text-base font-medium capitalize">{key.replace(/_/g, " ")}</h3>
+        <h3 class="text-base font-medium">{sectionLabel(key)}</h3>
         <SchemaForm schema={node} bind:values={values[key]} prefix={prefix + key + "."} />
       </section>
     {/if}
